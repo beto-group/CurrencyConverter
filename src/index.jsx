@@ -68,6 +68,7 @@ export default function CurrencyConverter() {
     const [equivCurrencies, setEquivCurrencies] = useState(DEFAULT_EQUIV);
     const [showAddEquivModal, setShowAddEquivModal] = useState(false);
     const [selectedNewEquiv, setSelectedNewEquiv] = useState('MYR');
+    const [isReorderingEquiv, setIsReorderingEquiv] = useState(false);
 
     // Custom Currency Injector Drawer State
     const [showCustomInjector, setShowCustomInjector] = useState(false);
@@ -251,6 +252,21 @@ export default function CurrencyConverter() {
         try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (e) {}
     };
 
+    // Reorder equivalent currency left (-1) or right (+1)
+    const handleMoveEquivCurrency = (e, index, direction) => {
+        e.stopPropagation();
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= equivCurrencies.length) return;
+
+        const updated = [...equivCurrencies];
+        const temp = updated[index];
+        updated[index] = updated[targetIndex];
+        updated[targetIndex] = temp;
+
+        setEquivCurrencies(updated);
+        try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (e) {}
+    };
+
     // Push pair conversion result into calculator
     const handlePushPairToCalc = () => {
         const amtNum = parseFloat(pairAmount) || 0;
@@ -368,30 +384,52 @@ export default function CurrencyConverter() {
                                         </span>
 
                                         {equivCurrencies.filter(c => c !== baseCurrency).map(cur => {
+                                            const realIdx = equivCurrencies.indexOf(cur);
                                             const eqVal = getCalcResultEquivalent(cur);
                                             return (
                                                 <div
                                                     key={cur}
-                                                    onClick={() => setBaseCurrency(cur)}
+                                                    onClick={() => !isReorderingEquiv && setBaseCurrency(cur)}
                                                     style={{
                                                         padding: '3px 8px',
                                                         borderRadius: '6px',
                                                         backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                                                        border: '1px solid #27272a',
+                                                        border: isReorderingEquiv ? '1px dashed #52525b' : '1px solid #27272a',
                                                         color: '#a1a1aa',
                                                         fontSize: '0.68rem',
                                                         fontFamily: "'JetBrains Mono', monospace",
-                                                        cursor: 'pointer',
+                                                        cursor: isReorderingEquiv ? 'default' : 'pointer',
                                                         whiteSpace: 'nowrap',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         gap: '5px'
                                                     }}
-                                                    title={`Click to set ${cur} as primary base currency`}
+                                                    title={isReorderingEquiv ? 'Reorder mode active' : `Click to set ${cur} as primary base currency`}
                                                 >
+                                                    {isReorderingEquiv && realIdx > 0 && (
+                                                        <span
+                                                            onClick={(e) => handleMoveEquivCurrency(e, realIdx, -1)}
+                                                            style={{ color: '#ffffff', fontWeight: '900', cursor: 'pointer', padding: '0 3px', backgroundColor: '#27272a', borderRadius: '3px' }}
+                                                            title="Move Left"
+                                                        >
+                                                            ‹
+                                                        </span>
+                                                    )}
+
                                                     <span style={{ color: '#ffffff', fontWeight: '700' }}>{cur}</span>
                                                     <span style={{ color: '#a1a1aa' }}>{eqVal}</span>
-                                                    {equivCurrencies.length > 2 && (
+
+                                                    {isReorderingEquiv && realIdx < equivCurrencies.length - 1 && (
+                                                        <span
+                                                            onClick={(e) => handleMoveEquivCurrency(e, realIdx, 1)}
+                                                            style={{ color: '#ffffff', fontWeight: '900', cursor: 'pointer', padding: '0 3px', backgroundColor: '#27272a', borderRadius: '3px' }}
+                                                            title="Move Right"
+                                                        >
+                                                            ›
+                                                        </span>
+                                                    )}
+
+                                                    {!isReorderingEquiv && equivCurrencies.length > 2 && (
                                                         <X
                                                             size={10}
                                                             style={{ opacity: 0.5, cursor: 'pointer', marginLeft: '2px' }}
@@ -401,6 +439,29 @@ export default function CurrencyConverter() {
                                                 </div>
                                             );
                                         })}
+
+                                        {/* Reorder Toggle Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsReorderingEquiv(!isReorderingEquiv)}
+                                            style={{
+                                                padding: '3px 8px',
+                                                borderRadius: '6px',
+                                                backgroundColor: isReorderingEquiv ? '#27272a' : '#18181b',
+                                                border: '1px solid #27272a',
+                                                color: isReorderingEquiv ? '#ffffff' : '#a1a1aa',
+                                                fontSize: '0.68rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                whiteSpace: 'nowrap',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '3px'
+                                            }}
+                                            title="Toggle Reorder Mode"
+                                        >
+                                            <ArrowUpDown size={10} /> {isReorderingEquiv ? 'Done' : 'Reorder'}
+                                        </button>
 
                                         {/* + Add Equivalent Pill */}
                                         <button
