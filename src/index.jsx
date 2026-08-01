@@ -276,8 +276,7 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
 
     return (
         <SafeAgentLayer>
-            <div className="currency-app" ref={containerRef} style={{ position: 'relative' }}>
-                <div className="glass-card" style={{ maxWidth: '460px', margin: '0 auto' }}>
+                <div className="glass-card">
                     <div className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
                         {isOnline ? 'ONLINE' : 'OFFLINE MODE'}
                     </div>
