@@ -6168,7 +6168,8 @@ const fp = [
               position: "absolute",
               top: "calc(100% + 6px)",
               left: 0,
-              width: "260px",
+              width: "clamp(220px, 80vw, 260px)",
+              maxWidth: "calc(100vw - 24px)",
               background: "#121215",
               border: "1px solid #27272a",
               borderRadius: "10px",
@@ -6432,9 +6433,9 @@ function yp() {
             }
           )
         ] }),
-        /* @__PURE__ */ g.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px", width: "100%", borderTop: "1px solid #1c1c21", paddingTop: "6px" }, children: [
+        /* @__PURE__ */ g.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "4px", width: "100%", borderTop: "1px solid #1c1c21", paddingTop: "6px" }, children: [
           /* @__PURE__ */ g.jsx("div", { style: { fontSize: "0.65rem", color: "#71717a", fontWeight: "600" }, children: "Math Shortcuts:" }),
-          /* @__PURE__ */ g.jsx("div", { style: { display: "flex", gap: "4px" }, children: [
+          /* @__PURE__ */ g.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px" }, children: [
             { label: "+", op: " + " },
             { label: "-", op: " - " },
             { label: "×", op: " * " },
@@ -6543,36 +6544,38 @@ function yp() {
           },
           y
         )) }),
-        /* @__PURE__ */ g.jsxs("div", { style: { display: "flex", alignItems: "center", gap: "6px", backgroundColor: "#09090b", padding: "6px", borderRadius: "8px", border: "1px solid #27272a", marginTop: "4px", flexWrap: "wrap" }, children: [
-          /* @__PURE__ */ g.jsx("span", { style: { fontSize: "0.75rem", fontWeight: "800", color: "#c084fc", padding: "0 4px" }, children: h === "*" ? "×" : h === "/" ? "÷" : h }),
-          /* @__PURE__ */ g.jsx(
-            "input",
-            {
-              type: "number",
-              value: m,
-              onChange: (y) => w(y.target.value),
-              placeholder: "Amount",
-              style: { width: "60px", background: "#121215", border: "1px solid #27272a", borderRadius: "4px", padding: "4px 6px", color: "#fafafa", fontSize: "0.75rem", outline: "none" }
-            }
-          ),
-          /* @__PURE__ */ g.jsx(
-            "select",
-            {
-              value: S,
-              onChange: (y) => k(y.target.value),
-              style: { background: "#121215", border: "1px solid #27272a", borderRadius: "4px", padding: "4px 6px", color: "#fafafa", fontSize: "0.75rem", outline: "none" },
-              children: R.map((y) => /* @__PURE__ */ g.jsx("option", { value: y, children: y }, y))
-            }
-          ),
+        /* @__PURE__ */ g.jsxs("div", { style: { display: "flex", alignItems: "center", gap: "6px", backgroundColor: "#09090b", padding: "6px 8px", borderRadius: "8px", border: "1px solid #27272a", marginTop: "4px", flexWrap: "wrap", width: "100%", boxSizing: "border-box" }, children: [
+          /* @__PURE__ */ g.jsxs("div", { style: { display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: "140px" }, children: [
+            /* @__PURE__ */ g.jsx("span", { style: { fontSize: "0.8rem", fontWeight: "800", color: "#c084fc" }, children: h === "*" ? "×" : h === "/" ? "÷" : h }),
+            /* @__PURE__ */ g.jsx(
+              "input",
+              {
+                type: "number",
+                value: m,
+                onChange: (y) => w(y.target.value),
+                placeholder: "Amount",
+                style: { width: "65px", background: "#121215", border: "1px solid #27272a", borderRadius: "4px", padding: "4px 6px", color: "#fafafa", fontSize: "0.75rem", outline: "none" }
+              }
+            ),
+            /* @__PURE__ */ g.jsx(
+              "select",
+              {
+                value: S,
+                onChange: (y) => k(y.target.value),
+                style: { background: "#121215", border: "1px solid #27272a", borderRadius: "4px", padding: "4px 6px", color: "#fafafa", fontSize: "0.75rem", outline: "none" },
+                children: R.map((y) => /* @__PURE__ */ g.jsx("option", { value: y, children: y }, y))
+              }
+            )
+          ] }),
           /* @__PURE__ */ g.jsxs(
             "button",
             {
               type: "button",
               onClick: () => E(h, S, m),
-              style: { flex: 1, padding: "4px 8px", borderRadius: "4px", backgroundColor: "#a855f7", color: "#ffffff", border: "none", fontSize: "0.7rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", whiteSpace: "nowrap" },
+              style: { padding: "6px 10px", borderRadius: "6px", backgroundColor: "#a855f7", color: "#ffffff", border: "none", fontSize: "0.7rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", whiteSpace: "nowrap", width: isMobile ? "100%" : "auto" },
               children: [
                 /* @__PURE__ */ g.jsx(tp, { size: 12 }),
-                " Inject into Formula"
+                " Inject Formula"
               ]
             }
           )

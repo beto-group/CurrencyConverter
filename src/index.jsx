@@ -269,9 +269,9 @@ export default function CurrencyConverter() {
                             </div>
 
                             {/* 1-Tap Quick Operator Shortcuts right under input */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%', borderTop: '1px solid #1c1c21', paddingTop: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', width: '100%', borderTop: '1px solid #1c1c21', paddingTop: '6px' }}>
                                 <div style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '600' }}>Math Shortcuts:</div>
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                     {[
                                         { label: '+', op: ' + ' },
                                         { label: '-', op: ' - ' },
@@ -410,30 +410,32 @@ export default function CurrencyConverter() {
                                 </div>
 
                                 {/* Custom Foreign Currency Injector Bar */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#09090b', padding: '6px', borderRadius: '8px', border: '1px solid #27272a', marginTop: '4px', flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#c084fc', padding: '0 4px' }}>
-                                        {activeOp === '*' ? '×' : activeOp === '/' ? '÷' : activeOp}
-                                    </span>
-                                    <input
-                                        type="number"
-                                        value={customAmount}
-                                        onChange={(e) => setCustomAmount(e.target.value)}
-                                        placeholder="Amount"
-                                        style={{ width: '60px', background: '#121215', border: '1px solid #27272a', borderRadius: '4px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
-                                    />
-                                    <select
-                                        value={customCur}
-                                        onChange={(e) => setCustomCur(e.target.value)}
-                                        style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '4px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
-                                    >
-                                        {currencies.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#09090b', padding: '6px 8px', borderRadius: '8px', border: '1px solid #27272a', marginTop: '4px', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: '140px' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#c084fc' }}>
+                                            {activeOp === '*' ? '×' : activeOp === '/' ? '÷' : activeOp}
+                                        </span>
+                                        <input
+                                            type="number"
+                                            value={customAmount}
+                                            onChange={(e) => setCustomAmount(e.target.value)}
+                                            placeholder="Amount"
+                                            style={{ width: '65px', background: '#121215', border: '1px solid #27272a', borderRadius: '4px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
+                                        />
+                                        <select
+                                            value={customCur}
+                                            onChange={(e) => setCustomCur(e.target.value)}
+                                            style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '4px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
+                                        >
+                                            {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => handleForeignMathOperation(activeOp, customCur, customAmount)}
-                                        style={{ flex: 1, padding: '4px 8px', borderRadius: '4px', backgroundColor: '#a855f7', color: '#ffffff', border: 'none', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                        style={{ padding: '6px 10px', borderRadius: '6px', backgroundColor: '#a855f7', color: '#ffffff', border: 'none', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}
                                     >
-                                        <PlusCircle size={12} /> Inject into Formula
+                                        <PlusCircle size={12} /> Inject Formula
                                     </button>
                                 </div>
                             </div>
