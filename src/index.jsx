@@ -398,37 +398,7 @@ export default function CurrencyConverter() {
         <SafeAgentLayer>
             <div className="currency-app" ref={containerRef} style={{ position: 'relative' }}>
                 <div className="studio-card">
-                    {/* Top Header: Title & Status */}
-                    <div className="studio-header">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '8px',
-                                background: '#27272a',
-                                border: '1px solid #3f3f46',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
-                                <Sparkles size={14} color="#fafafa" />
-                            </div>
-                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
-                                Currency Studio
-                            </span>
-                        </div>
-
-                        {/* Status Indicator */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: isOnline ? '#34d399' : '#f59e0b', fontWeight: '600' }}>
-                            <span style={{
-                                width: '7px',
-                                height: '7px',
-                                borderRadius: '50%',
-                                backgroundColor: isOnline ? '#10b981' : '#f59e0b'
-                            }}></span>
-                            <span>{isOnline ? 'Online' : 'Offline'}</span>
-                        </div>
-                    </div>
+                    {/* Mode Switcher Tabs */}
 
                     {/* Mode Switcher Tabs */}
                     <div className="tab-switcher">
