@@ -28,7 +28,7 @@ export const CustomDropdown = ({ options, value, onChange }) => {
         <div 
             className="custom-dropdown" 
             ref={dropdownRef}
-            style={{ position: 'relative', width: '140px', flexShrink: 0 }}
+            style={{ position: 'relative', width: 'clamp(105px, 28vw, 130px)', flexShrink: 0, minWidth: '95px' }}
         >
             <div 
                 className="dropdown-trigger" 

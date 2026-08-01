@@ -278,16 +278,17 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
         <SafeAgentLayer>
             <div className="currency-app" ref={containerRef} style={{ position: 'relative' }}>
                 <div className="glass-card">
-                    <div className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
-                        {isOnline ? 'ONLINE' : 'OFFLINE MODE'}
+                    <div className="currency-header">
+                        <h1 className="currency-title">
+                            <span>CONVERT & CALC</span>
+                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)' }}>
+                                PRO MATH
+                            </span>
+                        </h1>
+                        <div className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
+                            {isOnline ? 'ONLINE' : 'OFFLINE'}
+                        </div>
                     </div>
-                    
-                    <h1 className="currency-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <span>CONVERT & CALC</span>
-                        <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)' }}>
-                            PRO MATH
-                        </span>
-                    </h1>
                     
                     {/* FROM Input & Expression Bar */}
                     <div className="input-group">
@@ -436,34 +437,38 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
                     </div>
 
                     {/* Action Bar: Pipe Result & Sync */}
-                    <div style={{ display: 'flex', gap: '8px', margin: '14px 0 6px 0' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', margin: '10px 0 4px 0', width: '100%' }}>
                         <button
                             onClick={handlePipeResultToInput}
                             style={{
                                 flex: 1,
-                                padding: '10px',
+                                minWidth: '130px',
+                                padding: '10px 12px',
                                 backgroundColor: 'rgba(59, 130, 246, 0.2)',
                                 color: '#60a5fa',
                                 border: '1px solid rgba(59, 130, 246, 0.4)',
                                 borderRadius: '8px',
                                 fontWeight: '700',
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '6px'
+                                gap: '4px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
                             }}
                             title="Use converted output as new input for chained math"
                         >
-                            ⬇ Pipe Result ({convertedResultStr} {toCurrency})
+                            ⬇ Pipe Result ({convertedResultStr})
                         </button>
 
                         <button
                             className="sync-btn"
                             onClick={syncRates}
                             disabled={isSyncing}
-                            style={{ flex: 1, margin: 0 }}
+                            style={{ flex: 1, minWidth: '110px', margin: 0 }}
                         >
                             {isSyncing ? 'SYNCING...' : 'SYNC RATES'}
                         </button>
