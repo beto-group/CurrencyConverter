@@ -112,14 +112,20 @@
 }
 
 .calc-result {
-    font-size: clamp(1.6rem, 7vw, 2.4rem);
+    font-size: clamp(1.4rem, 6vw, 2.2rem);
     font-weight: 800;
     color: #4ade80;
     font-family: 'JetBrains Mono', monospace;
-    word-break: break-all;
+    overflow-x: auto;
+    white-space: nowrap;
     line-height: 1.1;
     width: 100%;
     text-align: right;
+    scrollbar-width: none;
+}
+
+.calc-result::-webkit-scrollbar {
+    display: none;
 }
 
 /* Calculator Keypad Grid */

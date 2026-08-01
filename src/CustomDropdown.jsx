@@ -7,6 +7,8 @@ export const CustomDropdown = ({ options, value, onChange }) => {
     const [search, setSearch] = useState('');
     const dropdownRef = useRef(null);
 
+    const [dropdownAlignRight, setDropdownAlignRight] = useState(false);
+
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -16,6 +18,17 @@ export const CustomDropdown = ({ options, value, onChange }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (isOpen && dropdownRef.current) {
+            const rect = dropdownRef.current.getBoundingClientRect();
+            if (rect.right > window.innerWidth / 2) {
+                setDropdownAlignRight(true);
+            } else {
+                setDropdownAlignRight(false);
+            }
+        }
+    }, [isOpen]);
 
     const filteredOptions = options.filter(opt => {
         const info = CURRENCY_INFO[opt] || { name: opt, symbol: opt };
@@ -92,9 +105,10 @@ export const CustomDropdown = ({ options, value, onChange }) => {
                     style={{
                         position: 'absolute',
                         top: 'calc(100% + 6px)',
-                        left: 0,
+                        right: dropdownAlignRight ? 0 : 'auto',
+                        left: dropdownAlignRight ? 'auto' : 0,
                         width: 'clamp(220px, 80vw, 260px)',
-                        maxWidth: 'calc(100vw - 24px)',
+                        maxWidth: 'calc(100vw - 32px)',
                         background: '#121215',
                         border: '1px solid #27272a',
                         borderRadius: '10px',
