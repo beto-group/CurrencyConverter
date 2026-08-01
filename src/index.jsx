@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Calculator, ArrowDown, RefreshCw, ArrowUpDown, History, Trash2, Check, Sparkles, Plus, Minus, X as MultiplyIcon, Divide as DivideIcon, PlusCircle } from 'lucide-react';
+import { Calculator, ArrowUpDown, RefreshCw, History, Trash2, Check, Sparkles, Plus, ArrowRight, ArrowDown } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { CURRENCY_INFO } from './currencies';
 import './styles.css';
 
-// Local storage key for persistent history
 const STORAGE_KEY = 'datacore_currency_history';
 
-// Default fallback exchange rates (Base: USD)
 const DEFAULT_RATES = {
     USD: 1.0,
     EUR: 0.92,
@@ -37,21 +35,26 @@ export const SafeAgentLayer = ({ children }) => {
 };
 
 export default function CurrencyConverter() {
-    const [rates, setRates] = useState(DEFAULT_RATES);
-    const [fromCurrency, setFromCurrency] = useState('USD');
-    const [toCurrency, setToCurrency] = useState('EUR');
-    
-    // Math expression input state (e.g. "100 + 45.50 * 2")
-    const [amountExpr, setAmountExpr] = useState('100');
-    const [showKeypad, setShowKeypad] = useState(false);
-    
-    // Active Operator for Foreign Currency Operations (+, -, *, /)
-    const [activeOp, setActiveOp] = useState('+');
+    // Mode State: 'calculator' vs 'exchange'
+    const [activeTab, setActiveTab] = useState('calculator');
 
-    // Custom Foreign Currency Injector States
-    const [customAmount, setCustomAmount] = useState('50');
-    const [customCur, setCustomCur] = useState('EUR');
+    const [rates, setRates] = useState(DEFAULT_RATES);
+    const [baseCurrency, setBaseCurrency] = useState('USD');
     
+    // Pair Exchange States
+    const [pairFromCur, setPairFromCur] = useState('USD');
+    const [pairToCur, setPairToCur] = useState('EUR');
+    const [pairAmount, setPairAmount] = useState('100');
+
+    // Calculator Expression State
+    const [calcExpr, setCalcExpr] = useState('100 + 50');
+
+    // Quick Currency Variable Injector Modal/Popover State
+    const [showVarModal, setShowVarModal] = useState(false);
+    const [varAmount, setVarAmount] = useState('50');
+    const [varCur, setVarCur] = useState('EUR');
+    const [varOp, setVarOp] = useState('+');
+
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isOnline, setIsOnline] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -62,22 +65,16 @@ export default function CurrencyConverter() {
     useEffect(() => {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                setHistory(JSON.parse(saved));
-            }
-        } catch (e) {
-            console.warn("Failed to load currency history", e);
-        }
+            if (saved) setHistory(JSON.parse(saved));
+        } catch (e) {}
     }, []);
 
     // Safe mathematical expression evaluator
     const evaluateMathExpression = (expr) => {
         try {
             if (!expr || !expr.trim()) return 0;
-            // Clean invalid characters & sanitize expression
             const sanitized = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/[^0-9.+\-*/() ]/g, '');
             if (!sanitized) return 0;
-            
             // eslint-disable-next-line no-new-func
             const result = Function(`"use strict"; return (${sanitized})`)();
             if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
@@ -89,48 +86,33 @@ export default function CurrencyConverter() {
         }
     };
 
-    const evaluatedBaseAmount = evaluateMathExpression(amountExpr);
+    const evaluatedCalcResult = evaluateMathExpression(calcExpr);
+    const formattedCalcResult = evaluatedCalcResult.toFixed(2);
 
-    // Calculate converted output
-    const calculateConverted = () => {
-        const rateFrom = rates[fromCurrency] || 1;
-        const rateTo = rates[toCurrency] || 1;
-        const amountInUSD = evaluatedBaseAmount / rateFrom;
-        return amountInUSD * rateTo;
+    // Pair Conversion Calculation
+    const calculatePairResult = () => {
+        const amt = parseFloat(pairAmount) || 0;
+        const rateFrom = rates[pairFromCur] || 1;
+        const rateTo = rates[pairToCur] || 1;
+        return (amt / rateFrom) * rateTo;
     };
 
-    const convertedResultNum = calculateConverted();
-    const convertedResultStr = convertedResultNum.toFixed(2);
+    const pairResultNum = calculatePairResult();
+    const pairResultStr = pairResultNum.toFixed(2);
 
     const syncRates = async () => {
         setIsSyncing(true);
         try {
-            const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+            const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`);
             if (res.ok) {
                 const data = await res.json();
                 setRates(data.rates);
                 setLastUpdated(new Date());
                 setIsOnline(true);
-
-                // Log to conversion history
-                const newRecord = {
-                    id: Date.now().toString(),
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    from: fromCurrency,
-                    to: toCurrency,
-                    expr: amountExpr,
-                    result: convertedResultStr
-                };
-                setHistory(prev => {
-                    const updated = [newRecord, ...prev.slice(0, 19)];
-                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch (e) {}
-                    return updated;
-                });
             } else {
                 setIsOnline(false);
             }
         } catch (err) {
-            console.warn("Using offline cached rates:", err);
             setIsOnline(false);
         } finally {
             setIsSyncing(false);
@@ -139,51 +121,73 @@ export default function CurrencyConverter() {
 
     useEffect(() => {
         syncRates();
-    }, [fromCurrency]);
+    }, [baseCurrency]);
 
-    const handleSwap = () => {
-        setFromCurrency(toCurrency);
-        setToCurrency(fromCurrency);
-    };
-
-    // Pipe Converted Result back into Input for chained math
-    const handlePipeResultToInput = () => {
-        setFromCurrency(toCurrency);
-        setAmountExpr(convertedResultStr);
-    };
-
-    // Calculator Keypad button press handler
-    const handleKeypadPress = (val) => {
+    // Keypad press handler
+    const handleKeypress = (val) => {
         if (val === 'AC') {
-            setAmountExpr('');
+            setCalcExpr('');
         } else if (val === 'DEL') {
-            setAmountExpr(prev => prev.length > 0 ? prev.slice(0, -1) : '');
+            setCalcExpr(prev => prev.length > 0 ? prev.slice(0, -1) : '');
         } else if (val === '=') {
-            setAmountExpr(evaluatedBaseAmount.toString());
+            const resultStr = formattedCalcResult;
+            setCalcExpr(resultStr);
+
+            // Log to calculation history tape
+            const newRecord = {
+                id: Date.now().toString(),
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                from: baseCurrency,
+                expr: calcExpr,
+                result: resultStr
+            };
+            setHistory(prev => {
+                const updated = [newRecord, ...prev.slice(0, 19)];
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch (e) {}
+                return updated;
+            });
         } else {
-            setAmountExpr(prev => prev + val);
+            setCalcExpr(prev => prev + val);
         }
     };
 
-    // Apply ANY math operator (+, -, *, /) for a foreign currency amount
-    const handleForeignMathOperation = (op, foreignCurrency, foreignAmount) => {
-        const amountNum = parseFloat(foreignAmount) || 0;
-        if (amountNum <= 0) return;
+    // Inject foreign currency converted value as a variable into calculator
+    const handleInjectForeignVariable = (op, amount, currency) => {
+        const amtNum = parseFloat(amount) || 0;
+        if (amtNum <= 0) return;
 
-        const rateForeign = rates[foreignCurrency] || 1;
-        const rateBase = rates[fromCurrency] || 1;
-        const converted = (amountNum / rateForeign) * rateBase;
+        const rateForeign = rates[currency] || 1;
+        const rateBase = rates[baseCurrency] || 1;
+        const converted = (amtNum / rateForeign) * rateBase;
         const formatted = converted.toFixed(2);
 
-        setAmountExpr(prev => {
+        setCalcExpr(prev => {
             const trimmed = prev.trim();
             if (!trimmed || trimmed === '0') return formatted;
-            // If ends with an operator, replace operator
             if (['+', '-', '*', '/', '×', '÷'].some(o => trimmed.endsWith(o))) {
                 return `${trimmed.slice(0, -1).trim()} ${op} ${formatted}`;
             }
             return `${trimmed} ${op} ${formatted}`;
         });
+
+        setShowVarModal(false);
+    };
+
+    // Push pair conversion result into calculator
+    const handlePushPairToCalc = () => {
+        const amtNum = parseFloat(pairAmount) || 0;
+        const rateTo = rates[pairToCur] || 1;
+        const rateBase = rates[baseCurrency] || 1;
+        const convertedToBase = (amtNum / (rates[pairFromCur] || 1)) * rateBase;
+        const formatted = convertedToBase.toFixed(2);
+
+        setCalcExpr(prev => {
+            const trimmed = prev.trim();
+            if (!trimmed || trimmed === '0') return formatted;
+            return `${trimmed} + ${formatted}`;
+        });
+
+        setActiveTab('calculator');
     };
 
     const currencies = Object.keys(rates).sort();
@@ -191,9 +195,9 @@ export default function CurrencyConverter() {
     return (
         <SafeAgentLayer>
             <div className="currency-app" ref={containerRef} style={{ position: 'relative' }}>
-                <div className="glass-card">
-                    {/* Header Row: Minimalist Title & Subtle Status Dot */}
-                    <div className="currency-header">
+                <div className="studio-card">
+                    {/* Top Header: Title & Status */}
+                    <div className="studio-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{
                                 width: '28px',
@@ -207,13 +211,12 @@ export default function CurrencyConverter() {
                             }}>
                                 <Sparkles size={15} color="#ffffff" />
                             </div>
-                            <div>
-                                <h1 className="currency-title">Currency Converter</h1>
-                                <div style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '500' }}>Pro Multi-Math Engine</div>
-                            </div>
+                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                                Currency Studio
+                            </span>
                         </div>
 
-                        {/* Subtle Online Status Dot */}
+                        {/* Status Indicator */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: isOnline ? '#4ade80' : '#f59e0b', fontWeight: '600' }}>
                             <span style={{
                                 width: '7px',
@@ -226,172 +229,68 @@ export default function CurrencyConverter() {
                         </div>
                     </div>
 
-                    {/* FROM Expression Section */}
-                    <div className="input-group">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <label style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>From Expression / Formula</label>
-                            <button
-                                type="button"
-                                onClick={() => setShowKeypad(!showKeypad)}
-                                style={{
-                                    fontSize: '0.7rem',
-                                    fontWeight: '600',
-                                    padding: '4px 8px',
-                                    borderRadius: '6px',
-                                    border: '1px solid rgba(168, 85, 247, 0.3)',
-                                    backgroundColor: showKeypad ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                                    color: showKeypad ? '#c084fc' : '#a1a1aa',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '5px'
-                                }}
-                            >
-                                <Calculator size={13} />
-                                {showKeypad ? 'Hide Keypad' : 'Keypad'}
-                            </button>
-                        </div>
-
-                        <div className="input-wrapper" style={{ flexDirection: 'column', gap: '8px', padding: '10px', backgroundColor: '#09090b', borderRadius: '12px', border: '1px solid #27272a' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                                <CustomDropdown 
-                                    options={currencies} 
-                                    value={fromCurrency} 
-                                    onChange={setFromCurrency}
-                                />
-                                <input 
-                                    className="currency-input"
-                                    type="text" 
-                                    value={amountExpr} 
-                                    onChange={(e) => setAmountExpr(e.target.value)}
-                                    placeholder="e.g. 100 + 45.5 * 2"
-                                />
-                            </div>
-
-                            {/* 1-Tap Quick Operator Shortcuts right under input */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', width: '100%', borderTop: '1px solid #1c1c21', paddingTop: '6px' }}>
-                                <div style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '600' }}>Math Shortcuts:</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                    {[
-                                        { label: '+', op: ' + ' },
-                                        { label: '-', op: ' - ' },
-                                        { label: '×', op: ' * ' },
-                                        { label: '÷', op: ' / ' },
-                                        { label: '(', op: '(' },
-                                        { label: ')', op: ')' }
-                                    ].map(item => (
-                                        <button
-                                            key={item.label}
-                                            type="button"
-                                            onClick={() => setAmountExpr(prev => prev + item.op)}
-                                            style={{
-                                                padding: '2px 8px',
-                                                borderRadius: '4px',
-                                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                color: '#e4e4e7',
-                                                fontSize: '0.75rem',
-                                                fontWeight: '700',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {item.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Evaluated Base Amount Sub-label */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#71717a', padding: '0 4px', fontFamily: "'JetBrains Mono', monospace", width: '100%', boxSizing: 'border-box' }}>
-                                <span>Evaluated = <strong style={{ color: '#e4e4e7' }}>{evaluatedBaseAmount.toFixed(2)} {fromCurrency}</strong></span>
-                                {amountExpr.match(/[+\-*/×÷]/) && <span style={{ color: '#38bdf8', fontWeight: '700' }}>Math Active</span>}
-                            </div>
-                        </div>
+                    {/* Mode Switcher Tabs */}
+                    <div className="tab-switcher">
+                        <button
+                            type="button"
+                            className={`tab-btn ${activeTab === 'calculator' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('calculator')}
+                        >
+                            <Calculator size={14} /> Calculator
+                        </button>
+                        <button
+                            type="button"
+                            className={`tab-btn ${activeTab === 'exchange' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('exchange')}
+                        >
+                            <ArrowUpDown size={14} /> Currency Pair
+                        </button>
                     </div>
 
-                    {/* Integrated Financial Calculator Keypad Grid */}
-                    {showKeypad && (
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '10px',
-                            backgroundColor: '#121215',
-                            border: '1px solid #27272a',
-                            borderRadius: '12px',
-                            padding: '10px',
-                            margin: '4px 0'
-                        }}>
-                            {/* Keypad Grid */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                                {['AC', '(', ')', 'DEL'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#f87171', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}>
-                                        {btn}
-                                    </button>
-                                ))}
-                                {['7', '8', '9', '÷'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn === '÷' ? '/' : btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: ['÷'].includes(btn) ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: ['÷'].includes(btn) ? '#38bdf8' : '#fafafa', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
-                                        {btn}
-                                    </button>
-                                ))}
-                                {['4', '5', '6', '×'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn === '×' ? '*' : btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: ['×'].includes(btn) ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: ['×'].includes(btn) ? '#38bdf8' : '#fafafa', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
-                                        {btn}
-                                    </button>
-                                ))}
-                                {['1', '2', '3', '-'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: ['-'].includes(btn) ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: ['-'].includes(btn) ? '#38bdf8' : '#fafafa', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
-                                        {btn}
-                                    </button>
-                                ))}
-                                {['0', '.', '=', '+'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: btn === '=' ? 'rgba(168, 85, 247, 0.3)' : btn === '+' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: btn === '=' ? '#c084fc' : btn === '+' ? '#38bdf8' : '#fafafa', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}>
-                                        {btn}
-                                    </button>
-                                ))}
+                    {/* TAB 1: 🧮 CALCULATOR STUDIO */}
+                    {activeTab === 'calculator' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                            {/* Base Currency Selection Bar */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>Target Base Currency:</span>
+                                <CustomDropdown
+                                    options={currencies}
+                                    value={baseCurrency}
+                                    onChange={setBaseCurrency}
+                                />
                             </div>
 
-                            {/* Multi-Operator Foreign Currency Action Section */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid #1c1c21' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            {/* Large Apple-Style Screen Display */}
+                            <div className="calc-screen">
+                                <div className="calc-expr">
+                                    {calcExpr || '0'}
+                                </div>
+                                <div className="calc-result">
+                                    {formattedCalcResult} <span style={{ fontSize: '1rem', color: '#71717a', fontWeight: '600' }}>{baseCurrency}</span>
+                                </div>
+                            </div>
+
+                            {/* Currency Variable Chips Row */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#09090b', padding: '10px', borderRadius: '12px', border: '1px solid #27272a' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '700', textTransform: 'uppercase' }}>
-                                        Foreign Currency Math Operator:
+                                        + Currency Variables:
                                     </span>
-                                    {/* Operator Selector Pills */}
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                        {[
-                                            { op: '+', label: '+' },
-                                            { op: '-', label: '-' },
-                                            { op: '*', label: '×' },
-                                            { op: '/', label: '÷' }
-                                        ].map(item => (
-                                            <button
-                                                key={item.op}
-                                                type="button"
-                                                onClick={() => setActiveOp(item.op)}
-                                                style={{
-                                                    padding: '2px 10px',
-                                                    borderRadius: '4px',
-                                                    backgroundColor: activeOp === item.op ? '#a855f7' : 'rgba(255, 255, 255, 0.05)',
-                                                    color: activeOp === item.op ? '#ffffff' : '#9ca3af',
-                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: '800',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                {item.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowVarModal(!showVarModal)}
+                                        style={{ fontSize: '0.65rem', color: '#c084fc', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                    >
+                                        <Plus size={11} /> Custom Injector
+                                    </button>
                                 </div>
 
-                                {/* Quick Currency Chips with Active Operator (+, -, *, /) */}
                                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-                                    {['EUR', 'USD', 'JPY', 'GBP', 'CNY'].map(cur => (
+                                    {['EUR', 'USD', 'JPY', 'GBP', 'CNY', 'CAD'].map(cur => (
                                         <button
                                             key={cur}
                                             type="button"
-                                            onClick={() => handleForeignMathOperation(activeOp, cur, 50)}
+                                            onClick={() => handleInjectForeignVariable('+', 50, cur)}
                                             style={{
                                                 padding: '4px 10px',
                                                 borderRadius: '6px',
@@ -404,136 +303,189 @@ export default function CurrencyConverter() {
                                                 whiteSpace: 'nowrap'
                                             }}
                                         >
-                                            {activeOp === '*' ? '×' : activeOp === '/' ? '÷' : activeOp} 50 {cur}
+                                            + 50 {cur}
                                         </button>
                                     ))}
                                 </div>
 
-                                {/* Custom Foreign Currency Injector Bar */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#09090b', padding: '6px 8px', borderRadius: '8px', border: '1px solid #27272a', marginTop: '4px', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: '140px' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#c084fc' }}>
-                                            {activeOp === '*' ? '×' : activeOp === '/' ? '÷' : activeOp}
-                                        </span>
+                                {/* Custom Currency Variable Injector Drawer */}
+                                {showVarModal && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '8px', borderTop: '1px solid #1c1c21', flexWrap: 'wrap' }}>
+                                        <select
+                                            value={varOp}
+                                            onChange={(e) => setVarOp(e.target.value)}
+                                            style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#c084fc', fontSize: '0.75rem', fontWeight: '800', outline: 'none' }}
+                                        >
+                                            <option value="+">+</option>
+                                            <option value="-">-</option>
+                                            <option value="*">×</option>
+                                            <option value="/">÷</option>
+                                        </select>
+
                                         <input
                                             type="number"
-                                            value={customAmount}
-                                            onChange={(e) => setCustomAmount(e.target.value)}
+                                            value={varAmount}
+                                            onChange={(e) => setVarAmount(e.target.value)}
                                             placeholder="Amount"
-                                            style={{ width: '65px', background: '#121215', border: '1px solid #27272a', borderRadius: '4px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
+                                            style={{ width: '65px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
                                         />
+
                                         <select
-                                            value={customCur}
-                                            onChange={(e) => setCustomCur(e.target.value)}
-                                            style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '4px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
+                                            value={varCur}
+                                            onChange={(e) => setVarCur(e.target.value)}
+                                            style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
                                         >
                                             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleInjectForeignVariable(varOp, varAmount, varCur)}
+                                            style={{ flex: 1, padding: '5px 10px', borderRadius: '6px', backgroundColor: '#a855f7', color: '#ffffff', border: 'none', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                        >
+                                            Inject into Formula
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleForeignMathOperation(activeOp, customCur, customAmount)}
-                                        style={{ padding: '6px 10px', borderRadius: '6px', backgroundColor: '#a855f7', color: '#ffffff', border: 'none', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}
-                                    >
-                                        <PlusCircle size={12} /> Inject Formula
-                                    </button>
-                                </div>
+                                )}
+                            </div>
+
+                            {/* Full 4x5 Tactile Keypad */}
+                            <div className="calc-keypad">
+                                <button type="button" className="key-btn action" onClick={() => handleKeypress('AC')}>AC</button>
+                                <button type="button" className="key-btn action" onClick={() => handleKeypress('(')}>(</button>
+                                <button type="button" className="key-btn action" onClick={() => handleKeypress(')')}>)</button>
+                                <button type="button" className="key-btn action" onClick={() => handleKeypress('DEL')}>DEL</button>
+
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('7')}>7</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('8')}>8</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('9')}>9</button>
+                                <button type="button" className="key-btn op" onClick={() => handleKeypress(' / ')}>÷</button>
+
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('4')}>4</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('5')}>5</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('6')}>6</button>
+                                <button type="button" className="key-btn op" onClick={() => handleKeypress(' * ')}>×</button>
+
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('1')}>1</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('2')}>2</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('3')}>3</button>
+                                <button type="button" className="key-btn op" onClick={() => handleKeypress(' - ')}>-</button>
+
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('0')}>0</button>
+                                <button type="button" className="key-btn" onClick={() => handleKeypress('.')}>.</button>
+                                <button type="button" className="key-btn equal" onClick={() => handleKeypress('=')}>=</button>
+                                <button type="button" className="key-btn op" onClick={() => handleKeypress(' + ')}>+</button>
                             </div>
                         </div>
                     )}
 
-                    {/* Swap Button */}
-                    <div 
-                        className="swap-btn" 
-                        onClick={handleSwap}
-                        title="Swap currencies"
-                        style={{ alignSelf: 'center', margin: '-2px 0' }}
-                    >
-                        <ArrowUpDown size={16} />
-                    </div>
+                    {/* TAB 2: 💱 CURRENCY PAIR EXCHANGE */}
+                    {activeTab === 'exchange' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+                            {/* FROM Currency Pair Box */}
+                            <div className="pair-box">
+                                <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>You Send / Convert:</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <CustomDropdown
+                                        options={currencies}
+                                        value={pairFromCur}
+                                        onChange={setPairFromCur}
+                                    />
+                                    <input
+                                        className="currency-input"
+                                        type="number"
+                                        value={pairAmount}
+                                        onChange={(e) => setPairAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        style={{ fontSize: '1.4rem', fontWeight: '700' }}
+                                    />
+                                </div>
+                            </div>
 
-                    {/* TO Converted Output */}
-                    <div className="input-group">
-                        <label style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>To Converted Result</label>
-                        <div className="input-wrapper" style={{ padding: '4px 10px', backgroundColor: '#09090b', borderRadius: '12px', border: '1px solid #27272a' }}>
-                            <CustomDropdown 
-                                options={currencies} 
-                                value={toCurrency} 
-                                onChange={setToCurrency}
-                            />
-                            <input 
-                                className="currency-input"
-                                type="text" 
-                                value={convertedResultStr} 
-                                readOnly
-                                style={{ color: '#4ade80', fontWeight: '800', fontFamily: "'JetBrains Mono', monospace" }}
-                            />
-                        </div>
-                    </div>
+                            {/* Swap Button */}
+                            <div
+                                className="swap-circle"
+                                onClick={() => {
+                                    const temp = pairFromCur;
+                                    setPairFromCur(pairToCur);
+                                    setPairToCur(temp);
+                                }}
+                                title="Swap Pair"
+                            >
+                                <ArrowUpDown size={18} />
+                            </div>
 
-                    {/* Action Bar: Pipe Result & Sync */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', width: '100%' }}>
-                        <button
-                            type="button"
-                            onClick={handlePipeResultToInput}
-                            style={{
-                                flex: 1,
-                                minWidth: '120px',
-                                padding: '10px 12px',
-                                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                                color: '#60a5fa',
-                                border: '1px solid rgba(59, 130, 246, 0.3)',
-                                borderRadius: '8px',
-                                fontWeight: '700',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '5px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                            }}
-                            title="Use converted output as new input for chained math"
-                        >
-                            <ArrowDown size={13} />
-                            Pipe Result ({convertedResultStr})
-                        </button>
+                            {/* TO Currency Pair Box */}
+                            <div className="pair-box">
+                                <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>You Receive:</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <CustomDropdown
+                                        options={currencies}
+                                        value={pairToCur}
+                                        onChange={setPairToCur}
+                                    />
+                                    <input
+                                        className="currency-input"
+                                        type="text"
+                                        value={pairResultStr}
+                                        readOnly
+                                        style={{ color: '#4ade80', fontSize: '1.4rem', fontWeight: '800', fontFamily: "'JetBrains Mono', monospace" }}
+                                    />
+                                </div>
+                            </div>
 
-                        <button
-                            type="button"
-                            className="sync-btn"
-                            onClick={syncRates}
-                            disabled={isSyncing}
-                            style={{
-                                flex: 1,
-                                minWidth: '110px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '5px',
-                                margin: 0
-                            }}
-                        >
-                            <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
-                            {isSyncing ? 'Syncing...' : 'Sync Rates'}
-                        </button>
-                    </div>
+                            {/* Action Bar: Push to Calculator & Sync */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', width: '100%', marginTop: '4px' }}>
+                                <button
+                                    type="button"
+                                    onClick={handlePushPairToCalc}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                                        color: '#c084fc',
+                                        border: '1px solid rgba(168, 85, 247, 0.4)',
+                                        borderRadius: '10px',
+                                        fontWeight: '800',
+                                        fontSize: '0.8rem',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    <ArrowRight size={15} /> Push Result ({pairResultStr} {pairToCur}) to Calc
+                                </button>
 
-                    {lastUpdated && (
-                        <div className="last-updated">
-                            Last synced: {lastUpdated.toLocaleTimeString()}
+                                <button
+                                    type="button"
+                                    className="sync-btn"
+                                    onClick={syncRates}
+                                    disabled={isSyncing}
+                                    style={{
+                                        padding: '12px 16px',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                                    {isSyncing ? 'Syncing...' : 'Sync Rates'}
+                                </button>
+                            </div>
                         </div>
                     )}
 
-                    {/* Calculation History Ledger */}
+                    {/* Calculation History Tape Ledger */}
                     {history.length > 0 && (
-                        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #27272a' }}>
+                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #27272a' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                 <span style={{ fontSize: '0.7rem', color: '#a1a1aa', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <History size={13} />
-                                    Conversion History
+                                    Calculation History Tape
                                 </span>
                                 <button
                                     type="button"
@@ -548,7 +500,7 @@ export default function CurrencyConverter() {
                                 {history.map(item => (
                                     <div
                                         key={item.id}
-                                        onClick={() => { setFromCurrency(item.to); setAmountExpr(item.result); }}
+                                        onClick={() => { setCalcExpr(item.expr); setActiveTab('calculator'); }}
                                         style={{
                                             backgroundColor: '#09090b',
                                             border: '1px solid #1c1c21',
@@ -561,9 +513,10 @@ export default function CurrencyConverter() {
                                             fontFamily: "'JetBrains Mono', monospace",
                                             cursor: 'pointer'
                                         }}
+                                        title="Click to restore into Calculator"
                                     >
                                         <div style={{ color: '#a1a1aa' }}>
-                                            <span style={{ color: '#e4e4e7', fontWeight: '600' }}>{item.expr} {item.from}</span> → <span style={{ color: '#4ade80', fontWeight: '700' }}>{item.result} {item.to}</span>
+                                            <span style={{ color: '#e4e4e7', fontWeight: '600' }}>{item.expr}</span> = <span style={{ color: '#4ade80', fontWeight: '700' }}>{item.result} {item.from}</span>
                                         </div>
                                         <span style={{ fontSize: '0.65rem', color: '#52525b' }}>{item.time}</span>
                                     </div>
