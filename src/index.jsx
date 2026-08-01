@@ -267,6 +267,57 @@ export default function CurrencyConverter() {
         try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (e) {}
     };
 
+    // Drag & Drop State & Handlers
+    const [draggedCurIndex, setDraggedCurIndex] = useState(null);
+    const [dragOverCurIndex, setDragOverCurIndex] = useState(null);
+    const longPressTimerRef = useRef(null);
+
+    const handleDragStart = (e, index) => {
+        setDraggedCurIndex(index);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e, index) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverCurIndex !== index) {
+            setDragOverCurIndex(index);
+        }
+    };
+
+    const handleDrop = (e, dropIndex) => {
+        e.preventDefault();
+        if (draggedCurIndex === null || draggedCurIndex === dropIndex) return;
+
+        const updated = [...equivCurrencies];
+        const [movedItem] = updated.splice(draggedCurIndex, 1);
+        updated.splice(dropIndex, 0, movedItem);
+
+        setEquivCurrencies(updated);
+        try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (err) {}
+
+        setDraggedCurIndex(null);
+        setDragOverCurIndex(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedCurIndex(null);
+        setDragOverCurIndex(null);
+    };
+
+    const handleTouchStart = (index) => {
+        longPressTimerRef.current = setTimeout(() => {
+            setIsReorderingEquiv(true);
+            setDraggedCurIndex(index);
+        }, 400);
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+        }
+    };
+
     // Push pair conversion result into calculator
     const handlePushPairToCalc = () => {
         const amtNum = parseFloat(pairAmount) || 0;
@@ -386,25 +437,38 @@ export default function CurrencyConverter() {
                                         {equivCurrencies.filter(c => c !== baseCurrency).map(cur => {
                                             const realIdx = equivCurrencies.indexOf(cur);
                                             const eqVal = getCalcResultEquivalent(cur);
+                                            const isBeingDragged = draggedCurIndex === realIdx;
+                                            const isDragTarget = dragOverCurIndex === realIdx;
+
                                             return (
                                                 <div
                                                     key={cur}
+                                                    draggable={true}
+                                                    onDragStart={(e) => handleDragStart(e, realIdx)}
+                                                    onDragOver={(e) => handleDragOver(e, realIdx)}
+                                                    onDrop={(e) => handleDrop(e, realIdx)}
+                                                    onDragEnd={handleDragEnd}
+                                                    onTouchStart={() => handleTouchStart(realIdx)}
+                                                    onTouchEnd={handleTouchEnd}
                                                     onClick={() => !isReorderingEquiv && setBaseCurrency(cur)}
                                                     style={{
                                                         padding: '3px 8px',
                                                         borderRadius: '6px',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                                                        border: isReorderingEquiv ? '1px dashed #52525b' : '1px solid #27272a',
+                                                        backgroundColor: isBeingDragged ? '#3f3f46' : (isDragTarget ? '#27272a' : 'rgba(255, 255, 255, 0.04)'),
+                                                        border: isBeingDragged ? '1px dashed #ffffff' : (isReorderingEquiv ? '1px dashed #71717a' : '1px solid #27272a'),
                                                         color: '#a1a1aa',
                                                         fontSize: '0.68rem',
                                                         fontFamily: "'JetBrains Mono', monospace",
-                                                        cursor: isReorderingEquiv ? 'default' : 'pointer',
+                                                        cursor: isReorderingEquiv ? 'grab' : 'pointer',
                                                         whiteSpace: 'nowrap',
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '5px'
+                                                        gap: '5px',
+                                                        opacity: isBeingDragged ? 0.5 : 1,
+                                                        transform: isBeingDragged ? 'scale(1.05)' : 'none',
+                                                        transition: 'all 0.15s ease'
                                                     }}
-                                                    title={isReorderingEquiv ? 'Reorder mode active' : `Click to set ${cur} as primary base currency`}
+                                                    title={isReorderingEquiv ? 'Drag to reorder' : `Click to set ${cur} as base currency (Drag or Long-Press to reorder)`}
                                                 >
                                                     {isReorderingEquiv && realIdx > 0 && (
                                                         <span
