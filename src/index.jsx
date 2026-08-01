@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
 import { Calculator, ArrowDown, RefreshCw, ArrowUpDown, History, Trash2, Check, Sparkles } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { CURRENCY_INFO } from './currencies';
@@ -469,4 +470,15 @@ export default function CurrencyConverter() {
             </div>
         </SafeAgentLayer>
     );
+}
+
+export function mount_app(container, platformAPI) {
+    if (!container) return () => {};
+    const root = ReactDOM.createRoot(container);
+    root.render(<CurrencyConverter platformAPI={platformAPI} />);
+    return () => {
+        try {
+            root.unmount();
+        } catch (e) {}
+    };
 }
