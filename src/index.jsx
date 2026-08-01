@@ -35,13 +35,44 @@ const DEFAULT_RATES = {
 const DEFAULT_CHIPS = ['EUR', 'USD', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY', 'BRL'];
 const DEFAULT_EQUIV = ['EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY', 'BRL', 'INR', 'VND'];
 
-export const SafeAgentLayer = ({ children }) => {
-    return (
-        <div className="safe-agent-layer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {children}
-        </div>
-    );
-};
+export class SafeAgentLayer extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error("[CurrencyConverter] Error caught by SafeAgentLayer boundary:", error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{ padding: '24px', color: '#f87171', background: '#09090b', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#ffffff' }}>Component Load Error</h3>
+                    <p style={{ fontSize: '0.85rem', color: '#a1a1aa', maxWidth: '300px', marginBottom: '16px' }}>
+                        {this.state.error?.message || "An unexpected runtime error occurred."}
+                    </p>
+                    <button 
+                        onClick={() => { localStorage.clear(); window.location.reload(); }}
+                        style={{ padding: '8px 16px', borderRadius: '8px', background: '#27272a', color: '#ffffff', border: '1px solid #3f3f46', cursor: 'pointer', fontWeight: '700' }}
+                    >
+                        Reset & Reload
+                    </button>
+                </div>
+            );
+        }
+        return (
+            <div className="safe-agent-layer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {this.props.children}
+            </div>
+        );
+    }
+}
 
 export default function CurrencyConverter() {
     // Mode State: 'calculator' vs 'exchange'
@@ -296,13 +327,17 @@ export default function CurrencyConverter() {
 
     const handleDragStart = (e, index) => {
         setDraggedCurIndex(index);
-        e.dataTransfer.effectAllowed = 'move';
+        if (e && e.dataTransfer) {
+            try { e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+        }
     };
 
     // Real-time fluid item swap on hover during drag
     const handleDragOverItem = (e, index) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.dataTransfer) {
+            try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+        }
         handleContainerDragOver(e);
 
         if (draggedCurIndex !== null && draggedCurIndex !== index) {
