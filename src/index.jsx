@@ -464,6 +464,7 @@ export default function CurrencyConverter() {
                                             const realIdx = equivCurrencies.indexOf(cur);
                                             const eqVal = getCalcResultEquivalent(cur);
                                             const isBeingDragged = draggedCurIndex === realIdx;
+                                            const isDragTarget = dragOverCurIndex === realIdx;
 
                                             return (
                                                 <div
