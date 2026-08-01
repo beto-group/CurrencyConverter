@@ -7,6 +7,7 @@ import './styles.css';
 
 const STORAGE_KEY_HIST = 'datacore_currency_history_v2';
 const STORAGE_KEY_CHIPS = 'datacore_currency_chips_v2';
+const STORAGE_KEY_EQUIV = 'datacore_equivalent_currencies_v1';
 
 const DEFAULT_RATES = {
     USD: 1.0,
@@ -32,6 +33,7 @@ const DEFAULT_RATES = {
 };
 
 const DEFAULT_CHIPS = ['EUR', 'USD', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY', 'BRL'];
+const DEFAULT_EQUIV = ['EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY', 'BRL', 'INR', 'VND'];
 
 export const SafeAgentLayer = ({ children }) => {
     return (
@@ -62,6 +64,11 @@ export default function CurrencyConverter() {
     const [showAddChipModal, setShowAddChipModal] = useState(false);
     const [selectedNewChip, setSelectedNewChip] = useState('VND');
 
+    // Dynamic Equivalent Currencies Bar State
+    const [equivCurrencies, setEquivCurrencies] = useState(DEFAULT_EQUIV);
+    const [showAddEquivModal, setShowAddEquivModal] = useState(false);
+    const [selectedNewEquiv, setSelectedNewEquiv] = useState('MYR');
+
     // Custom Currency Injector Drawer State
     const [showCustomInjector, setShowCustomInjector] = useState(false);
     const [customAmount, setCustomAmount] = useState('50');
@@ -82,6 +89,9 @@ export default function CurrencyConverter() {
 
             const savedChips = localStorage.getItem(STORAGE_KEY_CHIPS);
             if (savedChips) setUserChips(JSON.parse(savedChips));
+
+            const savedEquiv = localStorage.getItem(STORAGE_KEY_EQUIV);
+            if (savedEquiv) setEquivCurrencies(JSON.parse(savedEquiv));
         } catch (e) {}
     }, []);
 
@@ -223,6 +233,24 @@ export default function CurrencyConverter() {
         try { localStorage.setItem(STORAGE_KEY_CHIPS, JSON.stringify(updated)); } catch (e) {}
     };
 
+    // Add custom equivalent currency
+    const handleAddEquivCurrency = (currencyToAdd) => {
+        if (!equivCurrencies.includes(currencyToAdd)) {
+            const updated = [...equivCurrencies, currencyToAdd];
+            setEquivCurrencies(updated);
+            try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (e) {}
+        }
+        setShowAddEquivModal(false);
+    };
+
+    // Remove equivalent currency
+    const handleRemoveEquivCurrency = (e, currencyToRemove) => {
+        e.stopPropagation();
+        const updated = equivCurrencies.filter(c => c !== currencyToRemove);
+        setEquivCurrencies(updated);
+        try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (e) {}
+    };
+
     // Push pair conversion result into calculator
     const handlePushPairToCalc = () => {
         const amtNum = parseFloat(pairAmount) || 0;
@@ -318,47 +346,112 @@ export default function CurrencyConverter() {
                                     {formattedCalcResult} <span style={{ fontSize: '0.9rem', color: '#71717a', fontWeight: '600' }}>{baseCurrency}</span>
                                 </div>
 
-                                {/* Live Multi-Currency Equivalent Matrix Bar */}
+                                {/* Live Dynamic Multi-Currency Equivalent Matrix Bar */}
                                 <div style={{
                                     display: 'flex',
+                                    flexDirection: 'column',
                                     gap: '6px',
-                                    overflowX: 'auto',
                                     width: '100%',
                                     paddingTop: '8px',
-                                    borderTop: '1px solid #1c1c21',
-                                    scrollbarWidth: 'none'
+                                    borderTop: '1px solid #1c1c21'
                                 }}>
-                                    <span style={{ fontSize: '0.6rem', color: '#71717a', fontWeight: '800', alignSelf: 'center', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                                        Equivalents:
-                                    </span>
-                                    {matrixCurrencies.filter(c => c !== baseCurrency).map(cur => {
-                                        const eqVal = getCalcResultEquivalent(cur);
-                                        return (
-                                            <button
-                                                key={cur}
-                                                type="button"
-                                                onClick={() => setBaseCurrency(cur)}
-                                                style={{
-                                                    padding: '3px 8px',
-                                                    borderRadius: '6px',
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                                                    border: '1px solid #27272a',
-                                                    color: '#a1a1aa',
-                                                    fontSize: '0.68rem',
-                                                    fontFamily: "'JetBrains Mono', monospace",
-                                                    cursor: 'pointer',
-                                                    whiteSpace: 'nowrap',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px'
-                                                }}
-                                                title={`Click to set ${cur} as primary base currency`}
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '6px',
+                                        overflowX: 'auto',
+                                        width: '100%',
+                                        scrollbarWidth: 'none',
+                                        alignItems: 'center'
+                                    }}>
+                                        <span style={{ fontSize: '0.6rem', color: '#71717a', fontWeight: '800', alignSelf: 'center', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                                            Equivalents:
+                                        </span>
+
+                                        {equivCurrencies.filter(c => c !== baseCurrency).map(cur => {
+                                            const eqVal = getCalcResultEquivalent(cur);
+                                            return (
+                                                <div
+                                                    key={cur}
+                                                    onClick={() => setBaseCurrency(cur)}
+                                                    style={{
+                                                        padding: '3px 8px',
+                                                        borderRadius: '6px',
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                                                        border: '1px solid #27272a',
+                                                        color: '#a1a1aa',
+                                                        fontSize: '0.68rem',
+                                                        fontFamily: "'JetBrains Mono', monospace",
+                                                        cursor: 'pointer',
+                                                        whiteSpace: 'nowrap',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '5px'
+                                                    }}
+                                                    title={`Click to set ${cur} as primary base currency`}
+                                                >
+                                                    <span style={{ color: '#ffffff', fontWeight: '700' }}>{cur}</span>
+                                                    <span style={{ color: '#a1a1aa' }}>{eqVal}</span>
+                                                    {equivCurrencies.length > 2 && (
+                                                        <X
+                                                            size={10}
+                                                            style={{ opacity: 0.5, cursor: 'pointer', marginLeft: '2px' }}
+                                                            onClick={(e) => handleRemoveEquivCurrency(e, cur)}
+                                                        />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* + Add Equivalent Pill */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAddEquivModal(!showAddEquivModal)}
+                                            style={{
+                                                padding: '3px 8px',
+                                                borderRadius: '6px',
+                                                backgroundColor: '#18181b',
+                                                border: '1px solid #27272a',
+                                                color: '#ffffff',
+                                                fontSize: '0.68rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                whiteSpace: 'nowrap',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '3px'
+                                            }}
+                                        >
+                                            <Plus size={10} /> Add
+                                        </button>
+                                    </div>
+
+                                    {/* Add Equivalent Currency Popover Drawer */}
+                                    {showAddEquivModal && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '6px', borderTop: '1px solid #1c1c21', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '0.65rem', color: '#a1a1aa', fontWeight: '600' }}>Add Equivalent:</span>
+                                            <select
+                                                value={selectedNewEquiv}
+                                                onChange={(e) => setSelectedNewEquiv(e.target.value)}
+                                                style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '3px 6px', color: '#ffffff', fontSize: '0.7rem', outline: 'none' }}
                                             >
-                                                <span style={{ color: '#ffffff', fontWeight: '700' }}>{cur}</span>
-                                                <span style={{ color: '#a1a1aa' }}>{eqVal}</span>
+                                                {currencies.map(c => <option key={c} value={c}>{c} - {(CURRENCY_INFO[c] || {}).name || c}</option>)}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddEquivCurrency(selectedNewEquiv)}
+                                                style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: '#27272a', color: '#ffffff', border: '1px solid #3f3f46', fontSize: '0.65rem', fontWeight: '700', cursor: 'pointer' }}
+                                            >
+                                                + Add
                                             </button>
-                                        );
-                                    })}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAddEquivModal(false)}
+                                                style={{ padding: '3px 6px', borderRadius: '6px', backgroundColor: 'transparent', color: '#71717a', border: 'none', fontSize: '0.65rem', cursor: 'pointer' }}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
