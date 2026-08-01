@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Calculator, ArrowUpDown, RefreshCw, History, Trash2, Check, Sparkles, Plus, ArrowRight, ArrowDown } from 'lucide-react';
+import { Calculator, ArrowUpDown, RefreshCw, History, Trash2, Check, Sparkles, Plus, ArrowRight, ArrowDown, Globe } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { CURRENCY_INFO } from './currencies';
 import './styles.css';
@@ -100,6 +100,22 @@ export default function CurrencyConverter() {
     const pairResultNum = calculatePairResult();
     const pairResultStr = pairResultNum.toFixed(2);
 
+    // Calculate equivalent amount in any currency for current calculator result
+    const getCalcResultEquivalent = (targetCur) => {
+        const rateBase = rates[baseCurrency] || 1;
+        const rateTarget = rates[targetCur] || 1;
+        const amtInUSD = evaluatedCalcResult / rateBase;
+        return (amtInUSD * rateTarget).toFixed(2);
+    };
+
+    // Calculate equivalent amount in any currency for pair amount
+    const getPairAmountEquivalent = (targetCur) => {
+        const amt = parseFloat(pairAmount) || 0;
+        const rateFrom = rates[pairFromCur] || 1;
+        const rateTarget = rates[targetCur] || 1;
+        return ((amt / rateFrom) * rateTarget).toFixed(2);
+    };
+
     const syncRates = async () => {
         setIsSyncing(true);
         try {
@@ -176,7 +192,6 @@ export default function CurrencyConverter() {
     // Push pair conversion result into calculator
     const handlePushPairToCalc = () => {
         const amtNum = parseFloat(pairAmount) || 0;
-        const rateTo = rates[pairToCur] || 1;
         const rateBase = rates[baseCurrency] || 1;
         const convertedToBase = (amtNum / (rates[pairFromCur] || 1)) * rateBase;
         const formatted = convertedToBase.toFixed(2);
@@ -191,6 +206,7 @@ export default function CurrencyConverter() {
     };
 
     const currencies = Object.keys(rates).sort();
+    const matrixCurrencies = ['EUR', 'USD', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY', 'BRL', 'INR', 'VND'];
 
     return (
         <SafeAgentLayer>
@@ -267,6 +283,49 @@ export default function CurrencyConverter() {
                                 </div>
                                 <div className="calc-result">
                                     {formattedCalcResult} <span style={{ fontSize: '1rem', color: '#71717a', fontWeight: '600' }}>{baseCurrency}</span>
+                                </div>
+
+                                {/* Live Multi-Currency Equivalent Matrix Bar */}
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '6px',
+                                    overflowX: 'auto',
+                                    width: '100%',
+                                    paddingTop: '8px',
+                                    borderTop: '1px solid #1c1c21',
+                                    scrollbarWidth: 'none'
+                                }}>
+                                    <span style={{ fontSize: '0.6rem', color: '#71717a', fontWeight: '800', alignSelf: 'center', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                                        Equivalents:
+                                    </span>
+                                    {matrixCurrencies.filter(c => c !== baseCurrency).map(cur => {
+                                        const eqVal = getCalcResultEquivalent(cur);
+                                        return (
+                                            <button
+                                                key={cur}
+                                                type="button"
+                                                onClick={() => setBaseCurrency(cur)}
+                                                style={{
+                                                    padding: '3px 8px',
+                                                    borderRadius: '6px',
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                    color: '#a1a1aa',
+                                                    fontSize: '0.68rem',
+                                                    fontFamily: "'JetBrains Mono', monospace",
+                                                    cursor: 'pointer',
+                                                    whiteSpace: 'nowrap',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px'
+                                                }}
+                                                title={`Click to set ${cur} as primary base currency`}
+                                            >
+                                                <span style={{ color: '#38bdf8', fontWeight: '700' }}>{cur}</span>
+                                                <span style={{ color: '#e4e4e7' }}>{eqVal}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -434,8 +493,40 @@ export default function CurrencyConverter() {
                                 </div>
                             </div>
 
+                            {/* Multi-Currency Pair Comparison Grid */}
+                            <div style={{ backgroundColor: '#09090b', padding: '12px', borderRadius: '12px', border: '1px solid #27272a', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <span style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '700', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Globe size={12} /> Live Pair Equivalents ({pairAmount} {pairFromCur}):
+                                </span>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                                    {matrixCurrencies.filter(c => c !== pairFromCur).map(targetCur => {
+                                        const val = getPairAmountEquivalent(targetCur);
+                                        const isSelected = targetCur === pairToCur;
+                                        return (
+                                            <div
+                                                key={targetCur}
+                                                onClick={() => setPairToCur(targetCur)}
+                                                style={{
+                                                    backgroundColor: isSelected ? 'rgba(168, 85, 247, 0.15)' : '#121215',
+                                                    border: isSelected ? '1px solid #a855f7' : '1px solid #1c1c21',
+                                                    borderRadius: '8px',
+                                                    padding: '6px 8px',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '0.65rem', color: isSelected ? '#c084fc' : '#a1a1aa', fontWeight: '800' }}>{targetCur}</span>
+                                                <span style={{ fontSize: '0.8rem', color: isSelected ? '#4ade80' : '#ffffff', fontWeight: '700', fontFamily: "'JetBrains Mono', monospace" }}>{val}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             {/* Action Bar: Push to Calculator & Sync */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', width: '100%', marginTop: '4px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', width: '100%', marginTop: '2px' }}>
                                 <button
                                     type="button"
                                     onClick={handlePushPairToCalc}
