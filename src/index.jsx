@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Calculator, ArrowUpDown, RefreshCw, History, Trash2, Check, Sparkles, Plus, ArrowRight, ArrowDown, Globe } from 'lucide-react';
+import { Calculator, ArrowUpDown, RefreshCw, History, Trash2, Sparkles, Plus, ArrowRight, Globe, Settings2, X } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { CURRENCY_INFO } from './currencies';
 import './styles.css';
 
-const STORAGE_KEY = 'datacore_currency_history';
+const STORAGE_KEY_HIST = 'datacore_currency_history_v2';
+const STORAGE_KEY_CHIPS = 'datacore_currency_chips_v2';
 
 const DEFAULT_RATES = {
     USD: 1.0,
@@ -23,8 +24,14 @@ const DEFAULT_RATES = {
     IDR: 16100.0,
     VND: 25450.0,
     THB: 36.7,
-    MYR: 4.72
+    MYR: 4.72,
+    TRY: 32.5,
+    KRW: 1375.0,
+    MXN: 16.8,
+    RUB: 91.5
 };
+
+const DEFAULT_CHIPS = ['EUR', 'USD', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY', 'BRL'];
 
 export const SafeAgentLayer = ({ children }) => {
     return (
@@ -49,11 +56,17 @@ export default function CurrencyConverter() {
     // Calculator Expression State
     const [calcExpr, setCalcExpr] = useState('100 + 50');
 
-    // Quick Currency Variable Injector Modal/Popover State
-    const [showVarModal, setShowVarModal] = useState(false);
-    const [varAmount, setVarAmount] = useState('50');
-    const [varCur, setVarCur] = useState('EUR');
-    const [varOp, setVarOp] = useState('+');
+    // Quick Currency Variable Amount & Custom Chips
+    const [quickAmount, setQuickAmount] = useState('50');
+    const [userChips, setUserChips] = useState(DEFAULT_CHIPS);
+    const [showAddChipModal, setShowAddChipModal] = useState(false);
+    const [selectedNewChip, setSelectedNewChip] = useState('VND');
+
+    // Custom Currency Injector Drawer State
+    const [showCustomInjector, setShowCustomInjector] = useState(false);
+    const [customAmount, setCustomAmount] = useState('50');
+    const [customCur, setCustomCur] = useState('EUR');
+    const [customOp, setCustomOp] = useState('+');
 
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isOnline, setIsOnline] = useState(true);
@@ -61,11 +74,14 @@ export default function CurrencyConverter() {
     const [history, setHistory] = useState([]);
     const containerRef = useRef(null);
 
-    // Load saved conversion history on mount
+    // Load saved chips and conversion history on mount
     useEffect(() => {
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) setHistory(JSON.parse(saved));
+            const savedHist = localStorage.getItem(STORAGE_KEY_HIST);
+            if (savedHist) setHistory(JSON.parse(savedHist));
+
+            const savedChips = localStorage.getItem(STORAGE_KEY_CHIPS);
+            if (savedChips) setUserChips(JSON.parse(savedChips));
         } catch (e) {}
     }, []);
 
@@ -159,7 +175,7 @@ export default function CurrencyConverter() {
             };
             setHistory(prev => {
                 const updated = [newRecord, ...prev.slice(0, 19)];
-                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch (e) {}
+                try { localStorage.setItem(STORAGE_KEY_HIST, JSON.stringify(updated)); } catch (e) {}
                 return updated;
             });
         } else {
@@ -186,7 +202,25 @@ export default function CurrencyConverter() {
             return `${trimmed} ${op} ${formatted}`;
         });
 
-        setShowVarModal(false);
+        setShowCustomInjector(false);
+    };
+
+    // Add a custom currency chip to user's quick chips bar
+    const handleAddUserChip = (currencyToAdd) => {
+        if (!userChips.includes(currencyToAdd)) {
+            const updated = [...userChips, currencyToAdd];
+            setUserChips(updated);
+            try { localStorage.setItem(STORAGE_KEY_CHIPS, JSON.stringify(updated)); } catch (e) {}
+        }
+        setShowAddChipModal(false);
+    };
+
+    // Remove custom currency chip
+    const handleRemoveUserChip = (e, currencyToRemove) => {
+        e.stopPropagation();
+        const updated = userChips.filter(c => c !== currencyToRemove);
+        setUserChips(updated);
+        try { localStorage.setItem(STORAGE_KEY_CHIPS, JSON.stringify(updated)); } catch (e) {}
     };
 
     // Push pair conversion result into calculator
@@ -219,13 +253,13 @@ export default function CurrencyConverter() {
                                 width: '28px',
                                 height: '28px',
                                 borderRadius: '8px',
-                                background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+                                background: '#27272a',
+                                border: '1px solid #3f3f46',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 2px 10px rgba(168, 85, 247, 0.3)'
+                                justifyContent: 'center'
                             }}>
-                                <Sparkles size={15} color="#ffffff" />
+                                <Sparkles size={14} color="#fafafa" />
                             </div>
                             <span style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                                 Currency Studio
@@ -233,13 +267,12 @@ export default function CurrencyConverter() {
                         </div>
 
                         {/* Status Indicator */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: isOnline ? '#4ade80' : '#f59e0b', fontWeight: '600' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: isOnline ? '#34d399' : '#f59e0b', fontWeight: '600' }}>
                             <span style={{
                                 width: '7px',
                                 height: '7px',
                                 borderRadius: '50%',
-                                backgroundColor: isOnline ? '#22c55e' : '#f59e0b',
-                                boxShadow: isOnline ? '0 0 8px #22c55e' : 'none'
+                                backgroundColor: isOnline ? '#10b981' : '#f59e0b'
                             }}></span>
                             <span>{isOnline ? 'Online' : 'Offline'}</span>
                         </div>
@@ -276,13 +309,13 @@ export default function CurrencyConverter() {
                                 />
                             </div>
 
-                            {/* Large Apple-Style Screen Display */}
+                            {/* Large Minimalist Apple-Style Screen Display */}
                             <div className="calc-screen">
                                 <div className="calc-expr">
                                     {calcExpr || '0'}
                                 </div>
                                 <div className="calc-result">
-                                    {formattedCalcResult} <span style={{ fontSize: '1rem', color: '#71717a', fontWeight: '600' }}>{baseCurrency}</span>
+                                    {formattedCalcResult} <span style={{ fontSize: '0.9rem', color: '#71717a', fontWeight: '600' }}>{baseCurrency}</span>
                                 </div>
 
                                 {/* Live Multi-Currency Equivalent Matrix Bar */}
@@ -309,7 +342,7 @@ export default function CurrencyConverter() {
                                                     padding: '3px 8px',
                                                     borderRadius: '6px',
                                                     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                    border: '1px solid #27272a',
                                                     color: '#a1a1aa',
                                                     fontSize: '0.68rem',
                                                     fontFamily: "'JetBrains Mono', monospace",
@@ -321,59 +354,131 @@ export default function CurrencyConverter() {
                                                 }}
                                                 title={`Click to set ${cur} as primary base currency`}
                                             >
-                                                <span style={{ color: '#38bdf8', fontWeight: '700' }}>{cur}</span>
-                                                <span style={{ color: '#e4e4e7' }}>{eqVal}</span>
+                                                <span style={{ color: '#ffffff', fontWeight: '700' }}>{cur}</span>
+                                                <span style={{ color: '#a1a1aa' }}>{eqVal}</span>
                                             </button>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            {/* Currency Variable Chips Row */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#09090b', padding: '10px', borderRadius: '12px', border: '1px solid #27272a' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '700', textTransform: 'uppercase' }}>
-                                        + Currency Variables:
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowVarModal(!showVarModal)}
-                                        style={{ fontSize: '0.65rem', color: '#c084fc', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}
-                                    >
-                                        <Plus size={11} /> Custom Injector
-                                    </button>
+                            {/* Currency Variable Quick Chips Bar */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#09090b', padding: '10px 12px', borderRadius: '12px', border: '1px solid #27272a' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '800', textTransform: 'uppercase' }}>
+                                            Variable Amount:
+                                        </span>
+                                        {/* Quick Amount Selector Pills */}
+                                        <div style={{ display: 'flex', gap: '3px' }}>
+                                            {['10', '50', '100', '500'].map(amt => (
+                                                <button
+                                                    key={amt}
+                                                    type="button"
+                                                    onClick={() => setQuickAmount(amt)}
+                                                    style={{
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        backgroundColor: quickAmount === amt ? '#27272a' : 'transparent',
+                                                        color: quickAmount === amt ? '#ffffff' : '#71717a',
+                                                        border: '1px solid #27272a',
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: '700',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {amt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAddChipModal(true)}
+                                            style={{ fontSize: '0.65rem', color: '#ffffff', backgroundColor: '#18181b', border: '1px solid #27272a', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                        >
+                                            <Plus size={11} /> Add Currency
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCustomInjector(!showCustomInjector)}
+                                            style={{ fontSize: '0.65rem', color: '#a1a1aa', backgroundColor: 'transparent', border: '1px solid #27272a', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                        >
+                                            <Settings2 size={11} /> Math Injector
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-                                    {['EUR', 'USD', 'JPY', 'GBP', 'CNY', 'CAD'].map(cur => (
-                                        <button
+                                {/* Dynamic User Currency Chips */}
+                                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
+                                    {userChips.map(cur => (
+                                        <div
                                             key={cur}
-                                            type="button"
-                                            onClick={() => handleInjectForeignVariable('+', 50, cur)}
+                                            onClick={() => handleInjectForeignVariable('+', quickAmount, cur)}
                                             style={{
-                                                padding: '4px 10px',
+                                                padding: '4px 8px',
                                                 borderRadius: '6px',
-                                                backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                                                color: '#4ade80',
-                                                border: '1px solid rgba(34, 197, 94, 0.25)',
+                                                backgroundColor: '#18181b',
+                                                color: '#ffffff',
+                                                border: '1px solid #27272a',
                                                 fontSize: '0.7rem',
                                                 fontWeight: '700',
                                                 cursor: 'pointer',
-                                                whiteSpace: 'nowrap'
+                                                whiteSpace: 'nowrap',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
                                             }}
                                         >
-                                            + 50 {cur}
-                                        </button>
+                                            <span>+ {quickAmount} {cur}</span>
+                                            {userChips.length > 3 && (
+                                                <X
+                                                    size={11}
+                                                    style={{ opacity: 0.5, cursor: 'pointer' }}
+                                                    onClick={(e) => handleRemoveUserChip(e, cur)}
+                                                />
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
 
-                                {/* Custom Currency Variable Injector Drawer */}
-                                {showVarModal && (
+                                {/* Custom Add Currency Chip Popover Modal */}
+                                {showAddChipModal && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '8px', borderTop: '1px solid #1c1c21', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '0.7rem', color: '#a1a1aa', fontWeight: '600' }}>Select Currency:</span>
+                                        <select
+                                            value={selectedNewChip}
+                                            onChange={(e) => setSelectedNewChip(e.target.value)}
+                                            style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 8px', color: '#ffffff', fontSize: '0.75rem', outline: 'none' }}
+                                        >
+                                            {currencies.map(c => <option key={c} value={c}>{c} - {(CURRENCY_INFO[c] || {}).name || c}</option>)}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAddUserChip(selectedNewChip)}
+                                            style={{ padding: '5px 10px', borderRadius: '6px', backgroundColor: '#27272a', color: '#ffffff', border: '1px solid #3f3f46', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' }}
+                                        >
+                                            + Add Chip
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAddChipModal(false)}
+                                            style={{ padding: '5px 8px', borderRadius: '6px', backgroundColor: 'transparent', color: '#71717a', border: 'none', fontSize: '0.7rem', cursor: 'pointer' }}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Advanced Math Injector Drawer */}
+                                {showCustomInjector && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '8px', borderTop: '1px solid #1c1c21', flexWrap: 'wrap' }}>
                                         <select
-                                            value={varOp}
-                                            onChange={(e) => setVarOp(e.target.value)}
-                                            style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#c084fc', fontSize: '0.75rem', fontWeight: '800', outline: 'none' }}
+                                            value={customOp}
+                                            onChange={(e) => setCustomOp(e.target.value)}
+                                            style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#ffffff', fontSize: '0.75rem', fontWeight: '800', outline: 'none' }}
                                         >
                                             <option value="+">+</option>
                                             <option value="-">-</option>
@@ -383,15 +488,15 @@ export default function CurrencyConverter() {
 
                                         <input
                                             type="number"
-                                            value={varAmount}
-                                            onChange={(e) => setVarAmount(e.target.value)}
+                                            value={customAmount}
+                                            onChange={(e) => setCustomAmount(e.target.value)}
                                             placeholder="Amount"
                                             style={{ width: '65px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
                                         />
 
                                         <select
-                                            value={varCur}
-                                            onChange={(e) => setVarCur(e.target.value)}
+                                            value={customCur}
+                                            onChange={(e) => setCustomCur(e.target.value)}
                                             style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 6px', color: '#fafafa', fontSize: '0.75rem', outline: 'none' }}
                                         >
                                             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
@@ -399,8 +504,8 @@ export default function CurrencyConverter() {
 
                                         <button
                                             type="button"
-                                            onClick={() => handleInjectForeignVariable(varOp, varAmount, varCur)}
-                                            style={{ flex: 1, padding: '5px 10px', borderRadius: '6px', backgroundColor: '#a855f7', color: '#ffffff', border: 'none', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                            onClick={() => handleInjectForeignVariable(customOp, customAmount, customCur)}
+                                            style={{ flex: 1, padding: '5px 10px', borderRadius: '6px', backgroundColor: '#27272a', color: '#ffffff', border: '1px solid #3f3f46', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
                                         >
                                             Inject into Formula
                                         </button>
@@ -488,7 +593,7 @@ export default function CurrencyConverter() {
                                         type="text"
                                         value={pairResultStr}
                                         readOnly
-                                        style={{ color: '#4ade80', fontSize: '1.4rem', fontWeight: '800', fontFamily: "'JetBrains Mono', monospace" }}
+                                        style={{ color: '#ffffff', fontSize: '1.4rem', fontWeight: '800', fontFamily: "'JetBrains Mono', monospace" }}
                                     />
                                 </div>
                             </div>
@@ -507,8 +612,8 @@ export default function CurrencyConverter() {
                                                 key={targetCur}
                                                 onClick={() => setPairToCur(targetCur)}
                                                 style={{
-                                                    backgroundColor: isSelected ? 'rgba(168, 85, 247, 0.15)' : '#121215',
-                                                    border: isSelected ? '1px solid #a855f7' : '1px solid #1c1c21',
+                                                    backgroundColor: isSelected ? '#27272a' : '#121215',
+                                                    border: isSelected ? '1px solid #3f3f46' : '1px solid #1c1c21',
                                                     borderRadius: '8px',
                                                     padding: '6px 8px',
                                                     display: 'flex',
@@ -517,8 +622,8 @@ export default function CurrencyConverter() {
                                                     transition: 'all 0.15s ease'
                                                 }}
                                             >
-                                                <span style={{ fontSize: '0.65rem', color: isSelected ? '#c084fc' : '#a1a1aa', fontWeight: '800' }}>{targetCur}</span>
-                                                <span style={{ fontSize: '0.8rem', color: isSelected ? '#4ade80' : '#ffffff', fontWeight: '700', fontFamily: "'JetBrains Mono', monospace" }}>{val}</span>
+                                                <span style={{ fontSize: '0.65rem', color: isSelected ? '#ffffff' : '#a1a1aa', fontWeight: '800' }}>{targetCur}</span>
+                                                <span style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: '700', fontFamily: "'JetBrains Mono', monospace" }}>{val}</span>
                                             </div>
                                         );
                                     })}
@@ -533,9 +638,9 @@ export default function CurrencyConverter() {
                                     style={{
                                         flex: 1,
                                         padding: '12px',
-                                        backgroundColor: 'rgba(168, 85, 247, 0.2)',
-                                        color: '#c084fc',
-                                        border: '1px solid rgba(168, 85, 247, 0.4)',
+                                        backgroundColor: '#27272a',
+                                        color: '#ffffff',
+                                        border: '1px solid #3f3f46',
                                         borderRadius: '10px',
                                         fontWeight: '800',
                                         fontSize: '0.8rem',
@@ -560,7 +665,10 @@ export default function CurrencyConverter() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '6px',
+                                        backgroundColor: '#18181b',
+                                        color: '#ffffff',
+                                        border: '1px solid #27272a'
                                     }}
                                 >
                                     <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
@@ -580,7 +688,7 @@ export default function CurrencyConverter() {
                                 </span>
                                 <button
                                     type="button"
-                                    onClick={() => { setHistory([]); localStorage.removeItem(STORAGE_KEY); }}
+                                    onClick={() => { setHistory([]); localStorage.removeItem(STORAGE_KEY_HIST); }}
                                     style={{ backgroundColor: 'transparent', border: 'none', color: '#71717a', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                                 >
                                     <Trash2 size={11} /> Clear
@@ -607,7 +715,7 @@ export default function CurrencyConverter() {
                                         title="Click to restore into Calculator"
                                     >
                                         <div style={{ color: '#a1a1aa' }}>
-                                            <span style={{ color: '#e4e4e7', fontWeight: '600' }}>{item.expr}</span> = <span style={{ color: '#4ade80', fontWeight: '700' }}>{item.result} {item.from}</span>
+                                            <span style={{ color: '#e4e4e7', fontWeight: '600' }}>{item.expr}</span> = <span style={{ color: '#ffffff', fontWeight: '700' }}>{item.result} {item.from}</span>
                                         </div>
                                         <span style={{ fontSize: '0.65rem', color: '#52525b' }}>{item.time}</span>
                                     </div>

@@ -37,7 +37,7 @@
         padding: 24px;
     }
     .studio-card {
-        max-width: 500px;
+        max-width: 480px;
         padding: 24px;
         gap: 18px;
     }
@@ -102,7 +102,7 @@
 
 .calc-expr {
     font-size: clamp(0.85rem, 3.5vw, 1.05rem);
-    color: #a1a1aa;
+    color: #71717a;
     font-family: 'JetBrains Mono', monospace;
     word-break: break-all;
     min-height: 24px;
@@ -111,9 +111,9 @@
 }
 
 .calc-result {
-    font-size: clamp(1.4rem, 6vw, 2.2rem);
+    font-size: clamp(1.6rem, 7vw, 2.4rem);
     font-weight: 800;
-    color: #4ade80;
+    color: #ffffff;
     font-family: 'JetBrains Mono', monospace;
     overflow-x: auto;
     white-space: nowrap;
@@ -127,7 +127,7 @@
     display: none;
 }
 
-/* Calculator Keypad Grid */
+/* Minimalist Uniform Calculator Keypad Grid */
 .calc-keypad {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -139,10 +139,10 @@
 .key-btn {
     padding: 14px 10px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid #27272a;
     background: #18181b;
-    color: #fafafa;
-    font-size: clamp(1rem, 4vw, 1.25rem);
+    color: #ffffff;
+    font-size: clamp(1.05rem, 4vw, 1.25rem);
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -159,28 +159,34 @@
 }
 
 .key-btn.op {
-    background: rgba(168, 85, 247, 0.15);
-    color: #c084fc;
-    border-color: rgba(168, 85, 247, 0.3);
+    background: #27272a;
+    color: #ffffff;
+    border-color: #3f3f46;
     font-weight: 800;
 }
 
 .key-btn.op:active {
-    background: rgba(168, 85, 247, 0.35);
+    background: #3f3f46;
 }
 
 .key-btn.action {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
+    background: #18181b;
+    color: #a1a1aa;
+    border-color: #27272a;
     font-size: 0.85rem;
     font-weight: 700;
 }
 
 .key-btn.equal {
-    background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+    background: #3f3f46;
     color: #ffffff;
+    border-color: #52525b;
     font-weight: 800;
-    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.key-btn.equal:active {
+    background: #52525b;
 }
 
 /* Pair Exchange Inputs */
