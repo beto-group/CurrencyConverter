@@ -513,18 +513,18 @@ export default function CurrencyConverter() {
                                                     onTouchEnd={handleTouchEnd}
                                                     onClick={() => !isReorderingEquiv && setBaseCurrency(cur)}
                                                     style={{
-                                                        padding: '3px 8px',
-                                                        borderRadius: '6px',
-                                                        backgroundColor: isBeingDragged ? '#3f3f46' : (isDragTarget ? '#27272a' : 'rgba(255, 255, 255, 0.04)'),
+                                                        padding: '5px 10px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: isBeingDragged ? '#3f3f46' : (isDragTarget ? '#27272a' : 'rgba(255, 255, 255, 0.05)'),
                                                         border: isBeingDragged ? '1px dashed #ffffff' : (isReorderingEquiv ? '1px dashed #71717a' : '1px solid #27272a'),
                                                         color: '#a1a1aa',
-                                                        fontSize: '0.68rem',
+                                                        fontSize: '0.78rem',
                                                         fontFamily: "'JetBrains Mono', monospace",
                                                         cursor: isReorderingEquiv ? 'grab' : 'pointer',
                                                         whiteSpace: 'nowrap',
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '5px',
+                                                        gap: '6px',
                                                         opacity: isBeingDragged ? 0.5 : 1,
                                                         transform: isBeingDragged ? 'scale(1.05)' : 'none',
                                                         transition: 'all 0.15s ease'
@@ -534,7 +534,7 @@ export default function CurrencyConverter() {
                                                     {isReorderingEquiv && realIdx > 0 && (
                                                         <span
                                                             onClick={(e) => handleMoveEquivCurrency(e, realIdx, -1)}
-                                                            style={{ color: '#ffffff', fontWeight: '900', cursor: 'pointer', padding: '0 3px', backgroundColor: '#27272a', borderRadius: '3px' }}
+                                                            style={{ color: '#ffffff', fontWeight: '900', cursor: 'pointer', padding: '1px 5px', backgroundColor: '#27272a', borderRadius: '4px' }}
                                                             title="Move Left"
                                                         >
                                                             ‹
@@ -547,7 +547,7 @@ export default function CurrencyConverter() {
                                                     {isReorderingEquiv && realIdx < equivCurrencies.length - 1 && (
                                                         <span
                                                             onClick={(e) => handleMoveEquivCurrency(e, realIdx, 1)}
-                                                            style={{ color: '#ffffff', fontWeight: '900', cursor: 'pointer', padding: '0 3px', backgroundColor: '#27272a', borderRadius: '3px' }}
+                                                            style={{ color: '#ffffff', fontWeight: '900', cursor: 'pointer', padding: '1px 5px', backgroundColor: '#27272a', borderRadius: '4px' }}
                                                             title="Move Right"
                                                         >
                                                             ›
@@ -556,7 +556,7 @@ export default function CurrencyConverter() {
 
                                                     {!isReorderingEquiv && equivCurrencies.length > 2 && (
                                                         <X
-                                                            size={10}
+                                                            size={12}
                                                             style={{ opacity: 0.5, cursor: 'pointer', marginLeft: '2px' }}
                                                             onClick={(e) => handleRemoveEquivCurrency(e, cur)}
                                                         />
@@ -570,22 +570,22 @@ export default function CurrencyConverter() {
                                             type="button"
                                             onClick={() => setIsReorderingEquiv(!isReorderingEquiv)}
                                             style={{
-                                                padding: '3px 8px',
-                                                borderRadius: '6px',
+                                                padding: '5px 10px',
+                                                borderRadius: '8px',
                                                 backgroundColor: isReorderingEquiv ? '#27272a' : '#18181b',
                                                 border: '1px solid #27272a',
                                                 color: isReorderingEquiv ? '#ffffff' : '#a1a1aa',
-                                                fontSize: '0.68rem',
+                                                fontSize: '0.78rem',
                                                 fontWeight: '700',
                                                 cursor: 'pointer',
                                                 whiteSpace: 'nowrap',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '3px'
+                                                gap: '4px'
                                             }}
                                             title="Toggle Reorder Mode"
                                         >
-                                            <ArrowUpDown size={10} /> {isReorderingEquiv ? 'Done' : 'Reorder'}
+                                            <ArrowUpDown size={12} /> {isReorderingEquiv ? 'Done' : 'Reorder'}
                                         </button>
 
                                         {/* + Add Equivalent Pill */}
@@ -593,21 +593,21 @@ export default function CurrencyConverter() {
                                             type="button"
                                             onClick={() => setShowAddEquivModal(!showAddEquivModal)}
                                             style={{
-                                                padding: '3px 8px',
-                                                borderRadius: '6px',
+                                                padding: '5px 10px',
+                                                borderRadius: '8px',
                                                 backgroundColor: '#18181b',
                                                 border: '1px solid #27272a',
                                                 color: '#ffffff',
-                                                fontSize: '0.68rem',
+                                                fontSize: '0.78rem',
                                                 fontWeight: '700',
                                                 cursor: 'pointer',
                                                 whiteSpace: 'nowrap',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '3px'
+                                                gap: '4px'
                                             }}
                                         >
-                                            <Plus size={10} /> Add
+                                            <Plus size={12} /> Add
                                         </button>
                                     </div>
 

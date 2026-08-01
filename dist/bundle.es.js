@@ -1,4 +1,4 @@
-(function(){"use strict";try{if(typeof document<"u"){var e=document.createElement("style");e.appendChild(document.createTextNode(".currency-app{font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;width:100%;max-width:100%;min-height:100vh;background:#09090b;color:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 52px) 12px calc(env(safe-area-inset-bottom,0px) + 24px) 12px;box-sizing:border-box;overflow-x:hidden;overflow-y:auto}.studio-card{background:#121215;border:1px solid #27272a;border-radius:20px;padding:16px;width:100%;max-width:100%;box-shadow:0 20px 40px #0009;display:flex;flex-direction:column;gap:14px;position:relative;box-sizing:border-box;margin:auto 0;overflow-x:hidden}@media (min-width: 600px){.currency-app{padding:24px}.studio-card{max-width:480px;padding:24px;gap:18px}}.studio-header{display:flex;align-items:center;justify-content:space-between;width:100%;box-sizing:border-box}.tab-switcher{display:flex;background:#09090b;padding:3px;border-radius:12px;border:1px solid #27272a;width:100%;gap:4px}.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:none;border-radius:9px;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s ease;color:#71717a;background:transparent}.tab-btn.active{background:#27272a;color:#fff;box-shadow:0 2px 8px #0006}.calc-screen{background:#09090b;border:1px solid #27272a;border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;box-shadow:inset 0 2px 6px #000c;width:100%;box-sizing:border-box}.calc-expr{font-size:clamp(.85rem,3.5vw,1.05rem);color:#71717a;font-family:JetBrains Mono,monospace;word-break:break-all;min-height:24px;width:100%;text-align:right}.calc-result{font-size:clamp(1.6rem,7vw,2.4rem);font-weight:800;color:#fff;font-family:JetBrains Mono,monospace;overflow-x:auto;white-space:nowrap;line-height:1.1;width:100%;text-align:right;scrollbar-width:none}.calc-result::-webkit-scrollbar{display:none}.calc-keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;box-sizing:border-box}.key-btn{padding:14px 10px;border-radius:10px;border:1px solid #27272a;background:#18181b;color:#fff;font-size:clamp(1.05rem,4vw,1.25rem);font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s ease;-webkit-user-select:none;user-select:none;box-shadow:0 2px 6px #0000004d}.key-btn:active{transform:scale(.95);background:#27272a}.key-btn.op{background:#27272a;color:#fff;border-color:#3f3f46;font-weight:800}.key-btn.op:active{background:#3f3f46}.key-btn.action{background:#18181b;color:#a1a1aa;border-color:#27272a;font-size:.85rem;font-weight:700}.key-btn.equal{background:#3f3f46;color:#fff;border-color:#52525b;font-weight:800;box-shadow:0 4px 12px #0006}.key-btn.equal:active{background:#52525b}.pair-box{background:#09090b;border:1px solid #27272a;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box}.swap-circle{background:#18181b;border:1px solid #27272a;color:#a1a1aa;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;align-self:center;transition:all .2s ease;margin:-6px 0;z-index:2;box-shadow:0 4px 12px #00000080}.swap-circle:hover{background:#27272a;color:#fff;transform:rotate(180deg)}")),document.head.appendChild(e)}}catch(o){console.error("vite-plugin-css-injected-by-js",o)}})();
+(function(){"use strict";try{if(typeof document<"u"){var e=document.createElement("style");e.appendChild(document.createTextNode(".currency-app{font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;width:100%;max-width:100%;min-height:100vh;background:#09090b;color:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 52px) 14px calc(env(safe-area-inset-bottom,0px) + 28px) 14px;box-sizing:border-box;overflow-x:hidden;overflow-y:auto}.studio-card{background:#121215;border:1px solid #27272a;border-radius:24px;padding:20px;width:100%;max-width:100%;box-shadow:0 24px 48px #000000b3,0 0 0 1px #ffffff08;display:flex;flex-direction:column;gap:16px;position:relative;box-sizing:border-box;margin:auto 0;overflow-x:hidden}@media (min-width: 600px){.currency-app{padding:32px 24px}.studio-card{max-width:520px;padding:28px;gap:20px}}.studio-header{display:flex;align-items:center;justify-content:space-between;width:100%;box-sizing:border-box}.tab-switcher{display:flex;background:#09090b;padding:4px;border-radius:14px;border:1px solid #27272a;width:100%;gap:6px}.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border:none;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;transition:all .2s ease;color:#71717a;background:transparent}.tab-btn.active{background:#27272a;color:#fff;box-shadow:0 2px 10px #00000080}.calc-screen{background:#09090b;border:1px solid #27272a;border-radius:18px;padding:20px 18px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;box-shadow:inset 0 2px 8px #000000e6;width:100%;box-sizing:border-box}.calc-expr{font-size:clamp(1rem,4vw,1.25rem);color:#71717a;font-family:JetBrains Mono,monospace;word-break:break-all;min-height:28px;width:100%;text-align:right}.calc-result{font-size:clamp(2rem,8vw,3rem);font-weight:800;color:#fff;font-family:JetBrains Mono,monospace;overflow-x:auto;white-space:nowrap;line-height:1.1;width:100%;text-align:right;scrollbar-width:none}.calc-result::-webkit-scrollbar{display:none}.calc-keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;box-sizing:border-box}.key-btn{padding:16px 12px;min-height:54px;border-radius:12px;border:1px solid #27272a;background:#18181b;color:#fff;font-size:clamp(1.2rem,5vw,1.45rem);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s ease;-webkit-user-select:none;user-select:none;box-shadow:0 3px 8px #0006}.key-btn:active{transform:scale(.95);background:#27272a}.key-btn.op{background:#27272a;color:#fff;border-color:#3f3f46;font-weight:800}.key-btn.op:active{background:#3f3f46}.key-btn.action{background:#18181b;color:#a1a1aa;border-color:#27272a;font-size:.95rem;font-weight:700}.key-btn.equal{background:#3f3f46;color:#fff;border-color:#52525b;font-weight:800;box-shadow:0 4px 14px #00000080}.key-btn.equal:active{background:#52525b}.pair-box{background:#09090b;border:1px solid #27272a;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box}.currency-input{background:transparent;border:none;outline:none;color:#fff;font-size:1.6rem;font-weight:800;width:100%;text-align:right;box-sizing:border-box}.swap-circle{background:#18181b;border:1px solid #27272a;color:#a1a1aa;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;align-self:center;transition:all .2s ease;margin:-8px 0;z-index:2;box-shadow:0 4px 14px #0009}.swap-circle:hover{background:#27272a;color:#fff;transform:rotate(180deg)}")),document.head.appendChild(e)}}catch(o){console.error("vite-plugin-css-injected-by-js",o)}})();
 function rf(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
@@ -6639,18 +6639,18 @@ function pm() {
                       onTouchEnd: Jc,
                       onClick: () => !ie && o(h),
                       style: {
-                        padding: "3px 8px",
-                        borderRadius: "6px",
-                        backgroundColor: A ? "#3f3f46" : te ? "#27272a" : "rgba(255, 255, 255, 0.04)",
+                        padding: "5px 10px",
+                        borderRadius: "8px",
+                        backgroundColor: A ? "#3f3f46" : te ? "#27272a" : "rgba(255, 255, 255, 0.05)",
                         border: A ? "1px dashed #ffffff" : ie ? "1px dashed #71717a" : "1px solid #27272a",
                         color: "#a1a1aa",
-                        fontSize: "0.68rem",
+                        fontSize: "0.78rem",
                         fontFamily: "'JetBrains Mono', monospace",
                         cursor: ie ? "grab" : "pointer",
                         whiteSpace: "nowrap",
                         display: "flex",
                         alignItems: "center",
-                        gap: "5px",
+                        gap: "6px",
                         opacity: A ? 0.5 : 1,
                         transform: A ? "scale(1.05)" : "none",
                         transition: "all 0.15s ease"
@@ -6661,7 +6661,7 @@ function pm() {
                           "span",
                           {
                             onClick: (X) => cu(X, R, -1),
-                            style: { color: "#ffffff", fontWeight: "900", cursor: "pointer", padding: "0 3px", backgroundColor: "#27272a", borderRadius: "3px" },
+                            style: { color: "#ffffff", fontWeight: "900", cursor: "pointer", padding: "1px 5px", backgroundColor: "#27272a", borderRadius: "4px" },
                             title: "Move Left",
                             children: "‹"
                           }
@@ -6672,7 +6672,7 @@ function pm() {
                           "span",
                           {
                             onClick: (X) => cu(X, R, 1),
-                            style: { color: "#ffffff", fontWeight: "900", cursor: "pointer", padding: "0 3px", backgroundColor: "#27272a", borderRadius: "3px" },
+                            style: { color: "#ffffff", fontWeight: "900", cursor: "pointer", padding: "1px 5px", backgroundColor: "#27272a", borderRadius: "4px" },
                             title: "Move Right",
                             children: "›"
                           }
@@ -6680,7 +6680,7 @@ function pm() {
                         !ie && C.length > 2 && /* @__PURE__ */ p.jsx(
                           Ea,
                           {
-                            size: 10,
+                            size: 12,
                             style: { opacity: 0.5, cursor: "pointer", marginLeft: "2px" },
                             onClick: (X) => Vc(X, h)
                           }
@@ -6696,22 +6696,22 @@ function pm() {
                     type: "button",
                     onClick: () => ut(!ie),
                     style: {
-                      padding: "3px 8px",
-                      borderRadius: "6px",
+                      padding: "5px 10px",
+                      borderRadius: "8px",
                       backgroundColor: ie ? "#27272a" : "#18181b",
                       border: "1px solid #27272a",
                       color: ie ? "#ffffff" : "#a1a1aa",
-                      fontSize: "0.68rem",
+                      fontSize: "0.78rem",
                       fontWeight: "700",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                       display: "flex",
                       alignItems: "center",
-                      gap: "3px"
+                      gap: "4px"
                     },
                     title: "Toggle Reorder Mode",
                     children: [
-                      /* @__PURE__ */ p.jsx(po, { size: 10 }),
+                      /* @__PURE__ */ p.jsx(po, { size: 12 }),
                       " ",
                       ie ? "Done" : "Reorder"
                     ]
@@ -6723,21 +6723,21 @@ function pm() {
                     type: "button",
                     onClick: () => B(!j),
                     style: {
-                      padding: "3px 8px",
-                      borderRadius: "6px",
+                      padding: "5px 10px",
+                      borderRadius: "8px",
                       backgroundColor: "#18181b",
                       border: "1px solid #27272a",
                       color: "#ffffff",
-                      fontSize: "0.68rem",
+                      fontSize: "0.78rem",
                       fontWeight: "700",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                       display: "flex",
                       alignItems: "center",
-                      gap: "3px"
+                      gap: "4px"
                     },
                     children: [
-                      /* @__PURE__ */ p.jsx(Ca, { size: 10 }),
+                      /* @__PURE__ */ p.jsx(Ca, { size: 12 }),
                       " Add"
                     ]
                   }
