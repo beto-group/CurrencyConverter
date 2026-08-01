@@ -1,248 +1,150 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useState, useEffect, useRef } from 'react';
+import { Calculator, ArrowDown, RefreshCw, ArrowUpDown, History, Trash2, Check, Sparkles } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
+import { CURRENCY_INFO } from './currencies';
 import './styles.css';
 
-// DOM Utilities for FullTab Reparenting
-const findNearestAncestorWithClass = (element, className) => {
-    if (!element) return null;
-    let current = element.parentNode;
-    while (current) {
-        if (current.classList && current.classList.contains(className)) return current;
-        current = current.parentNode;
-    }
-    return null;
+// Local storage key for persistent history
+const STORAGE_KEY = 'datacore_currency_history';
+
+// Default fallback exchange rates (Base: USD)
+const DEFAULT_RATES = {
+    USD: 1.0,
+    EUR: 0.92,
+    GBP: 0.79,
+    JPY: 155.2,
+    CAD: 1.37,
+    AUD: 1.51,
+    CHF: 0.91,
+    CNY: 7.23,
+    INR: 83.4,
+    BRL: 5.15,
+    SGD: 1.35,
+    HKD: 7.82,
+    IDR: 16100.0,
+    VND: 25450.0,
+    THB: 36.7,
+    MYR: 4.72
 };
 
-const findDirectChildByClass = (element, className) => {
-    if (!element) return null;
-    for (let i = 0; i < element.children.length; i++) {
-        if (element.children[i].classList.contains(className)) return element.children[i];
-    }
-    return null;
-};
-
-function useFullTab(ref, platform) {
-    useLayoutEffect(() => {
-        if (platform !== 'obsidian') return;
-        const currentEl = ref.current;
-        if (!currentEl) return;
-        const workspaceLeaf = findNearestAncestorWithClass(currentEl, 'workspace-leaf');
-        if (!workspaceLeaf) return;
-        
-        const leafContent = findDirectChildByClass(workspaceLeaf, 'workspace-leaf-content');
-        if (leafContent) {
-            leafContent.style.padding = '0';
-            leafContent.style.margin = '0';
-            leafContent.style.overflow = 'hidden';
-            leafContent.style.display = 'flex';
-            leafContent.style.flexDirection = 'column';
-        }
-        
-        const viewContent = findDirectChildByClass(leafContent, 'view-content');
-        if (viewContent) {
-            viewContent.style.padding = '0';
-            viewContent.style.margin = '0';
-            viewContent.style.overflow = 'hidden';
-            
-            const markdownReadingView = findDirectChildByClass(viewContent, 'markdown-reading-view');
-            if (markdownReadingView) {
-                markdownReadingView.style.display = 'none';
-            }
-            viewContent.appendChild(currentEl);
-        }
-        
-        const statusBar = document.querySelector('.status-bar');
-        if (statusBar) statusBar.style.display = 'none';
-        
-        return () => {
-            if (statusBar) statusBar.style.display = '';
-            if (leafContent) leafContent.style = '';
-            const markdownReadingView = findDirectChildByClass(viewContent, 'markdown-reading-view');
-            if (markdownReadingView) markdownReadingView.style.display = '';
-        };
-    }, [platform]);
-}
-
-const SafeAgentLayer = ({ children }) => {
+export const SafeAgentLayer = ({ children }) => {
     return (
-        <div className="agent-layer-safe-zone" style={{ width: '100%', height: '100%' }}>
+        <div className="safe-agent-layer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
             {children}
         </div>
     );
 };
 
-const DEFAULT_RATES = {
-    "USD": 1,
-    "EUR": 0.92,
-    "GBP": 0.78,
-    "JPY": 150.5,
-    "AUD": 1.53,
-    "CAD": 1.35,
-    "CHF": 0.88,
-    "CNY": 7.19,
-    "INR": 82.9
-};
-
-// Safe Math Expression Evaluator (Supports +, -, *, /, %, parens, decimals)
-const evaluateExpression = (expr) => {
-    if (!expr || typeof expr !== 'string') return 0;
-    try {
-        const sanitized = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/[^0-9+\-*/.()% ]/g, '');
-        if (!sanitized.trim()) return 0;
-
-        // eslint-disable-next-line no-new-func
-        const fn = new Function(`return (${sanitized});`);
-        const res = fn();
-        return isNaN(res) || !isFinite(res) ? 0 : res;
-    } catch (e) {
-        return 0;
-    }
-};
-
-const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
-    const containerRef = useRef(null);
-    useFullTab(containerRef, platform);
-
+export default function CurrencyConverter() {
     const [rates, setRates] = useState(DEFAULT_RATES);
+    const [fromCurrency, setFromCurrency] = useState('USD');
+    const [toCurrency, setToCurrency] = useState('EUR');
+    
+    // Math expression input state (e.g. "100 + 45.50 * 2")
+    const [amountExpr, setAmountExpr] = useState('100');
+    const [showKeypad, setShowKeypad] = useState(false);
+    
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isOnline, setIsOnline] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
-
-    const [fromCurrency, setFromCurrency] = useState('USD');
-    const [toCurrency, setToCurrency] = useState('EUR');
-    const [amountExpr, setAmountExpr] = useState('100');
-    const [showKeypad, setShowKeypad] = useState(false);
     const [history, setHistory] = useState([]);
+    const containerRef = useRef(null);
 
-    // Load rates & history from cache on mount
+    // Load saved conversion history on mount
     useEffect(() => {
-        const cached = localStorage.getItem('datacore_currency_rates');
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                if (parsed.rates) setRates(parsed.rates);
-                if (parsed.timestamp) setLastUpdated(new Date(parsed.timestamp));
-            } catch (e) {
-                console.error("Cache parsing error", e);
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                setHistory(JSON.parse(saved));
             }
+        } catch (e) {
+            console.warn("Failed to load currency history", e);
         }
-
-        const savedHistory = localStorage.getItem('datacore_currency_history');
-        if (savedHistory) {
-            try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
-        }
-        
-        updateMcpState();
-        syncRates();
-        
-        const updateOnlineStatus = () => setIsOnline(navigator.onLine);
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-        setIsOnline(navigator.onLine);
-        
-        return () => {
-            window.removeEventListener('online', updateOnlineStatus);
-            window.removeEventListener('offline', updateOnlineStatus);
-        };
     }, []);
 
-    const updateMcpState = async () => {
-        if (platform === 'obsidian' && dc?.io?.write) {
-            try {
-                await dc.io.write('_resources/data/mcp_state.json', JSON.stringify({
-                    component: "CurrencyConverter",
-                    status: "active",
-                    lastHeartbeat: new Date().toISOString()
-                }, null, 2));
-            } catch (e) {
-                console.error("MCP update failed", e);
+    // Safe mathematical expression evaluator
+    const evaluateMathExpression = (expr) => {
+        try {
+            if (!expr || !expr.trim()) return 0;
+            // Clean invalid characters & sanitize expression
+            const sanitized = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/[^0-9.+\-*/() ]/g, '');
+            if (!sanitized) return 0;
+            
+            // eslint-disable-next-line no-new-func
+            const result = Function(`"use strict"; return (${sanitized})`)();
+            if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                return result;
             }
+            return 0;
+        } catch (err) {
+            return 0;
         }
     };
 
+    const evaluatedBaseAmount = evaluateMathExpression(amountExpr);
+
+    // Calculate converted output
+    const calculateConverted = () => {
+        const rateFrom = rates[fromCurrency] || 1;
+        const rateTo = rates[toCurrency] || 1;
+        const amountInUSD = evaluatedBaseAmount / rateFrom;
+        return amountInUSD * rateTo;
+    };
+
+    const convertedResultNum = calculateConverted();
+    const convertedResultStr = convertedResultNum.toFixed(2);
+
     const syncRates = async () => {
-        if (!navigator.onLine) {
-            setIsOnline(false);
-            return;
-        }
         setIsSyncing(true);
         try {
-            let fetchedRates = null;
-            try {
-                const sovRes = await fetch('http://localhost:3457/api/rates');
-                if (sovRes.ok) {
-                    const sovData = await sovRes.json();
-                    if (sovData && sovData.rates) fetchedRates = sovData.rates;
-                }
-            } catch (e) {
-                console.log("Sovereign sidecar unavailable, falling back to public API...");
-            }
-            
-            if (!fetchedRates) {
-                const res = await fetch('https://open.er-api.com/v6/latest/USD');
+            const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+            if (res.ok) {
                 const data = await res.json();
-                if (data && data.rates) fetchedRates = data.rates;
-            }
+                setRates(data.rates);
+                setLastUpdated(new Date());
+                setIsOnline(true);
 
-            if (fetchedRates) {
-                setRates(fetchedRates);
-                const timestamp = Date.now();
-                setLastUpdated(new Date(timestamp));
-                localStorage.setItem('datacore_currency_rates', JSON.stringify({
-                    rates: fetchedRates,
-                    timestamp: timestamp
-                }));
+                // Log to conversion history
+                const newRecord = {
+                    id: Date.now().toString(),
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    from: fromCurrency,
+                    to: toCurrency,
+                    expr: amountExpr,
+                    result: convertedResultStr
+                };
+                setHistory(prev => {
+                    const updated = [newRecord, ...prev.slice(0, 19)];
+                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch (e) {}
+                    return updated;
+                });
+            } else {
+                setIsOnline(false);
             }
-        } catch (error) {
-            console.error("Failed to sync rates", error);
+        } catch (err) {
+            console.warn("Using offline cached rates:", err);
+            setIsOnline(false);
         } finally {
             setIsSyncing(false);
         }
     };
+
+    useEffect(() => {
+        syncRates();
+    }, [fromCurrency]);
 
     const handleSwap = () => {
         setFromCurrency(toCurrency);
         setToCurrency(fromCurrency);
     };
 
-    // Evaluate input math expression live
-    const evaluatedBaseAmount = evaluateExpression(amountExpr);
-
-    const calculateResult = () => {
-        const rateFrom = rates[fromCurrency] || 1;
-        const rateTo = rates[toCurrency] || 1;
-        
-        const usdVal = evaluatedBaseAmount / rateFrom;
-        const finalVal = usdVal * rateTo;
-        
-        return finalVal.toFixed(2);
-    };
-
-    const convertedResultStr = calculateResult();
-
-    // Pipe converted result back to input field for chained conversions
+    // Pipe Converted Result back into Input for chained math
     const handlePipeResultToInput = () => {
-        const res = convertedResultStr;
         setFromCurrency(toCurrency);
-        setAmountExpr(res);
-
-        // Add to history ledger
-        const entry = {
-            id: Date.now(),
-            expr: amountExpr,
-            baseVal: evaluatedBaseAmount.toFixed(2),
-            from: fromCurrency,
-            to: toCurrency,
-            result: res,
-            time: new Date().toLocaleTimeString()
-        };
-        const updated = [entry, ...history.slice(0, 9)];
-        setHistory(updated);
-        localStorage.setItem('datacore_currency_history', JSON.stringify(updated));
+        setAmountExpr(convertedResultStr);
     };
 
-    // Calculator Keypad Actions
+    // Calculator Keypad button press handler
     const handleKeypadPress = (val) => {
         if (val === 'AC') {
             setAmountExpr('');
@@ -278,41 +180,68 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
         <SafeAgentLayer>
             <div className="currency-app" ref={containerRef} style={{ position: 'relative' }}>
                 <div className="glass-card">
+                    {/* Header Row: Minimalist Title & Subtle Status Dot */}
                     <div className="currency-header">
-                        <h1 className="currency-title">
-                            <span>CONVERT & CALC</span>
-                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)' }}>
-                                PRO MATH
-                            </span>
-                        </h1>
-                        <div className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
-                            {isOnline ? 'ONLINE' : 'OFFLINE'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '8px',
+                                background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 10px rgba(168, 85, 247, 0.3)'
+                            }}>
+                                <Sparkles size={15} color="#ffffff" />
+                            </div>
+                            <div>
+                                <h1 className="currency-title">Currency Converter</h1>
+                                <div style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '500' }}>Pro Financial Math Engine</div>
+                            </div>
+                        </div>
+
+                        {/* Subtle Online Status Dot */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: isOnline ? '#4ade80' : '#f59e0b', fontWeight: '600' }}>
+                            <span style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                backgroundColor: isOnline ? '#22c55e' : '#f59e0b',
+                                boxShadow: isOnline ? '0 0 8px #22c55e' : 'none'
+                            }}></span>
+                            <span>{isOnline ? 'Online' : 'Offline'}</span>
                         </div>
                     </div>
-                    
-                    {/* FROM Input & Expression Bar */}
+
+                    {/* FROM Expression Section */}
                     <div className="input-group">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label>From Expression</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <label style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>From Expression</label>
                             <button
+                                type="button"
                                 onClick={() => setShowKeypad(!showKeypad)}
                                 style={{
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    padding: '3px 8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '600',
+                                    padding: '4px 8px',
                                     borderRadius: '6px',
-                                    border: 'none',
-                                    backgroundColor: showKeypad ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-                                    color: showKeypad ? '#d8b4fe' : '#9ca3af',
-                                    cursor: 'pointer'
+                                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                                    backgroundColor: showKeypad ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                                    color: showKeypad ? '#c084fc' : '#a1a1aa',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
                                 }}
                             >
-                                🧮 {showKeypad ? 'Hide Keypad' : 'Math Keypad'}
+                                <Calculator size={13} />
+                                {showKeypad ? 'Hide Keypad' : 'Keypad'}
                             </button>
                         </div>
 
-                        <div className="input-wrapper" style={{ flexDirection: 'column', gap: '6px', backgroundColor: 'rgba(6, 7, 10, 0.7)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
-                            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <div className="input-wrapper" style={{ flexDirection: 'column', gap: '8px', padding: '10px', backgroundColor: '#09090b', borderRadius: '12px', border: '1px solid #27272a' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                                 <CustomDropdown 
                                     options={currencies} 
                                     value={fromCurrency} 
@@ -322,16 +251,15 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
                                     className="currency-input"
                                     type="text" 
                                     value={amountExpr} 
-                                    onChange={e => setAmountExpr(e.target.value)}
-                                    placeholder="e.g. 100 + 45 * 2"
-                                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '15px' }}
+                                    onChange={(e) => setAmountExpr(e.target.value)}
+                                    placeholder="0.00"
                                 />
                             </div>
 
                             {/* Evaluated Base Amount Sub-label */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#a1a1aa', padding: '0 4px', fontFamily: "'JetBrains Mono', monospace" }}>
-                                <span>Evaluated = <strong>{evaluatedBaseAmount.toFixed(2)} {fromCurrency}</strong></span>
-                                {amountExpr.match(/[+\-*/×÷]/) && <span style={{ color: '#38bdf8' }}>Math Active</span>}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#71717a', padding: '0 4px', fontFamily: "'JetBrains Mono', monospace", width: '100%', boxSizing: 'border-box' }}>
+                                <span>Evaluated = <strong style={{ color: '#e4e4e7' }}>{evaluatedBaseAmount.toFixed(2)} {fromCurrency}</strong></span>
+                                {amountExpr.match(/[+\-*/×÷]/) && <span style={{ color: '#38bdf8', fontWeight: '700' }}>Math Active</span>}
                             </div>
                         </div>
                     </div>
@@ -342,59 +270,60 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '8px',
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            border: '1px solid rgba(168, 85, 247, 0.3)',
-                            borderRadius: '14px',
-                            padding: '12px',
-                            margin: '10px 0'
+                            backgroundColor: '#121215',
+                            border: '1px solid #27272a',
+                            borderRadius: '12px',
+                            padding: '10px',
+                            margin: '4px 0'
                         }}>
                             {/* Keypad Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                                 {['AC', '(', ')', 'DEL'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>
+                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#f87171', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}>
                                         {btn}
                                     </button>
                                 ))}
                                 {['7', '8', '9', '÷'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn === '÷' ? '/' : btn)} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: ['÷'].includes(btn) ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.06)', color: ['÷'].includes(btn) ? '#38bdf8' : '#ffffff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                                    <button key={btn} onClick={() => handleKeypadPress(btn === '÷' ? '/' : btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: ['÷'].includes(btn) ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: ['÷'].includes(btn) ? '#38bdf8' : '#fafafa', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
                                         {btn}
                                     </button>
                                 ))}
                                 {['4', '5', '6', '×'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn === '×' ? '*' : btn)} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: ['×'].includes(btn) ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.06)', color: ['×'].includes(btn) ? '#38bdf8' : '#ffffff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                                    <button key={btn} onClick={() => handleKeypadPress(btn === '×' ? '*' : btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: ['×'].includes(btn) ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: ['×'].includes(btn) ? '#38bdf8' : '#fafafa', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
                                         {btn}
                                     </button>
                                 ))}
                                 {['1', '2', '3', '-'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: ['-'].includes(btn) ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.06)', color: ['-'].includes(btn) ? '#38bdf8' : '#ffffff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: ['-'].includes(btn) ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: ['-'].includes(btn) ? '#38bdf8' : '#fafafa', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
                                         {btn}
                                     </button>
                                 ))}
                                 {['0', '.', '=', '+'].map(btn => (
-                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: btn === '=' ? 'rgba(168, 85, 247, 0.4)' : btn === '+' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(255,255,255,0.06)', color: btn === '=' ? '#d8b4fe' : btn === '+' ? '#38bdf8' : '#ffffff', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>
+                                    <button key={btn} onClick={() => handleKeypadPress(btn)} style={{ padding: '8px', borderRadius: '6px', border: 'none', backgroundColor: btn === '=' ? 'rgba(168, 85, 247, 0.3)' : btn === '+' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)', color: btn === '=' ? '#c084fc' : btn === '+' ? '#38bdf8' : '#fafafa', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}>
                                         {btn}
                                     </button>
                                 ))}
                             </div>
 
-                            {/* Currency Multi-Math Quick Add Chips */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                                <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase' }}>
-                                    + Add Foreign Amount to Expression:
+                            {/* Multi-Currency Quick Add Chips */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '6px', borderTop: '1px solid #1c1c21' }}>
+                                <span style={{ fontSize: '0.65rem', color: '#71717a', fontWeight: '600', textTransform: 'uppercase' }}>
+                                    Add Foreign Amount:
                                 </span>
-                                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
                                     {['EUR', 'USD', 'JPY', 'GBP', 'CNY'].map(cur => (
                                         <button
                                             key={cur}
+                                            type="button"
                                             onClick={() => handleAddForeignCurrency(cur, 50)}
                                             style={{
-                                                padding: '4px 10px',
-                                                borderRadius: '6px',
-                                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                                                color: '#34d399',
-                                                border: '1px solid rgba(16, 185, 129, 0.3)',
-                                                fontSize: '11px',
-                                                fontWeight: '700',
+                                                padding: '3px 8px',
+                                                borderRadius: '5px',
+                                                backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                                                color: '#4ade80',
+                                                border: '1px solid rgba(34, 197, 94, 0.25)',
+                                                fontSize: '0.7rem',
+                                                fontWeight: '600',
                                                 cursor: 'pointer',
                                                 whiteSpace: 'nowrap'
                                             }}
@@ -407,20 +336,20 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
                         </div>
                     )}
 
-                    <div className="swap-btn" onClick={handleSwap}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="16 3 21 3 21 8"></polyline>
-                            <line x1="4" y1="21" x2="21" y2="3"></line>
-                            <polyline points="21 16 21 21 16 21"></polyline>
-                            <line x1="15" y1="15" x2="21" y2="21"></line>
-                            <line x1="4" y1="4" x2="9" y2="9"></line>
-                        </svg>
+                    {/* Swap Button */}
+                    <div 
+                        className="swap-btn" 
+                        onClick={handleSwap}
+                        title="Swap currencies"
+                        style={{ alignSelf: 'center', margin: '-2px 0' }}
+                    >
+                        <ArrowUpDown size={16} />
                     </div>
 
                     {/* TO Converted Output */}
                     <div className="input-group">
-                        <label>To Converted Result</label>
-                        <div className="input-wrapper">
+                        <label style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: '600' }}>To Converted Result</label>
+                        <div className="input-wrapper" style={{ padding: '4px 10px', backgroundColor: '#09090b', borderRadius: '12px', border: '1px solid #27272a' }}>
                             <CustomDropdown 
                                 options={currencies} 
                                 value={toCurrency} 
@@ -437,43 +366,55 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
                     </div>
 
                     {/* Action Bar: Pipe Result & Sync */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', margin: '10px 0 4px 0', width: '100%' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', width: '100%' }}>
                         <button
+                            type="button"
                             onClick={handlePipeResultToInput}
                             style={{
                                 flex: 1,
-                                minWidth: '130px',
+                                minWidth: '120px',
                                 padding: '10px 12px',
-                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.15)',
                                 color: '#60a5fa',
-                                border: '1px solid rgba(59, 130, 246, 0.4)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
                                 borderRadius: '8px',
                                 fontWeight: '700',
-                                fontSize: '11px',
+                                fontSize: '0.75rem',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '4px',
+                                gap: '5px',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap'
                             }}
                             title="Use converted output as new input for chained math"
                         >
-                            ⬇ Pipe Result ({convertedResultStr})
+                            <ArrowDown size={13} />
+                            Pipe Result ({convertedResultStr})
                         </button>
 
                         <button
+                            type="button"
                             className="sync-btn"
                             onClick={syncRates}
                             disabled={isSyncing}
-                            style={{ flex: 1, minWidth: '110px', margin: 0 }}
+                            style={{
+                                flex: 1,
+                                minWidth: '110px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                                margin: 0
+                            }}
                         >
-                            {isSyncing ? 'SYNCING...' : 'SYNC RATES'}
+                            <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                            {isSyncing ? 'Syncing...' : 'Sync Rates'}
                         </button>
                     </div>
-                    
+
                     {lastUpdated && (
                         <div className="last-updated">
                             Last synced: {lastUpdated.toLocaleTimeString()}
@@ -482,41 +423,43 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
 
                     {/* Calculation History Ledger */}
                     {history.length > 0 && (
-                        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #27272a' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase' }}>
-                                    📋 CONVERSION LEDGER HISTORY
+                                <span style={{ fontSize: '0.7rem', color: '#a1a1aa', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <History size={13} />
+                                    Conversion History
                                 </span>
                                 <button
-                                    onClick={() => { setHistory([]); localStorage.removeItem('datacore_currency_history'); }}
-                                    style={{ backgroundColor: 'transparent', border: 'none', color: '#71717a', fontSize: '10px', cursor: 'pointer' }}
+                                    type="button"
+                                    onClick={() => { setHistory([]); localStorage.removeItem(STORAGE_KEY); }}
+                                    style={{ backgroundColor: 'transparent', border: 'none', color: '#71717a', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                                 >
-                                    Clear History
+                                    <Trash2 size={11} /> Clear
                                 </button>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
                                 {history.map(item => (
                                     <div
                                         key={item.id}
                                         onClick={() => { setFromCurrency(item.to); setAmountExpr(item.result); }}
                                         style={{
-                                            backgroundColor: 'rgba(6, 7, 10, 0.6)',
-                                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                                            borderRadius: '8px',
-                                            padding: '8px 10px',
+                                            backgroundColor: '#09090b',
+                                            border: '1px solid #1c1c21',
+                                            borderRadius: '6px',
+                                            padding: '6px 10px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
-                                            fontSize: '11px',
+                                            fontSize: '0.7rem',
                                             fontFamily: "'JetBrains Mono', monospace",
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        <span style={{ color: '#a1a1aa' }}>
-                                            {item.baseVal} {item.from} → <strong style={{ color: '#4ade80' }}>{item.result} {item.to}</strong>
-                                        </span>
-                                        <span style={{ color: '#71717a', fontSize: '10px' }}>{item.time}</span>
+                                        <div style={{ color: '#a1a1aa' }}>
+                                            <span style={{ color: '#e4e4e7', fontWeight: '600' }}>{item.expr} {item.from}</span> → <span style={{ color: '#4ade80', fontWeight: '700' }}>{item.result} {item.to}</span>
+                                        </div>
+                                        <span style={{ fontSize: '0.65rem', color: '#52525b' }}>{item.time}</span>
                                     </div>
                                 ))}
                             </div>
@@ -526,22 +469,4 @@ const CurrencyConverter = ({ platform = 'obsidian', dc, platformAPI = {} }) => {
             </div>
         </SafeAgentLayer>
     );
-};
-
-export async function mount_app(container, platformAPI = {}) {
-    const root = createRoot(container);
-    root.render(<CurrencyConverter platformAPI={platformAPI} platform="obsidian" />);
-    return function cleanup() {
-        root.unmount();
-    };
-}
-
-export function View(props) {
-    return <CurrencyConverter {...props} />;
-}
-
-export default CurrencyConverter;
-
-if (typeof document !== 'undefined' && document.getElementById('root')) {
-    createRoot(document.getElementById('root')).render(<CurrencyConverter />);
 }
