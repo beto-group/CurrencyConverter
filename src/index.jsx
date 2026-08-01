@@ -267,35 +267,57 @@ export default function CurrencyConverter() {
         try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (e) {}
     };
 
-    // Drag & Drop State & Handlers
+    // Drag & Drop State & Auto-Scroll Engine
     const [draggedCurIndex, setDraggedCurIndex] = useState(null);
     const [dragOverCurIndex, setDragOverCurIndex] = useState(null);
     const longPressTimerRef = useRef(null);
+    const equivScrollRef = useRef(null);
+
+    // Smooth horizontal auto-scroll when dragging near container edges
+    const handleContainerDragOver = (e) => {
+        e.preventDefault();
+        if (!equivScrollRef.current) return;
+
+        const rect = equivScrollRef.current.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        if (!clientX) return;
+
+        const leftEdgeZone = rect.left + 50;
+        const rightEdgeZone = rect.right - 50;
+
+        if (clientX < leftEdgeZone) {
+            const speed = Math.max(4, Math.min(16, (leftEdgeZone - clientX) * 0.4));
+            equivScrollRef.current.scrollLeft -= speed;
+        } else if (clientX > rightEdgeZone) {
+            const speed = Math.max(4, Math.min(16, (clientX - rightEdgeZone) * 0.4));
+            equivScrollRef.current.scrollLeft += speed;
+        }
+    };
 
     const handleDragStart = (e, index) => {
         setDraggedCurIndex(index);
         e.dataTransfer.effectAllowed = 'move';
     };
 
-    const handleDragOver = (e, index) => {
+    // Real-time fluid item swap on hover during drag
+    const handleDragOverItem = (e, index) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        if (dragOverCurIndex !== index) {
-            setDragOverCurIndex(index);
+        handleContainerDragOver(e);
+
+        if (draggedCurIndex !== null && draggedCurIndex !== index) {
+            const updated = [...equivCurrencies];
+            const [movedItem] = updated.splice(draggedCurIndex, 1);
+            updated.splice(index, 0, movedItem);
+
+            setEquivCurrencies(updated);
+            setDraggedCurIndex(index);
+            try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (err) {}
         }
     };
 
-    const handleDrop = (e, dropIndex) => {
+    const handleDrop = (e) => {
         e.preventDefault();
-        if (draggedCurIndex === null || draggedCurIndex === dropIndex) return;
-
-        const updated = [...equivCurrencies];
-        const [movedItem] = updated.splice(draggedCurIndex, 1);
-        updated.splice(dropIndex, 0, movedItem);
-
-        setEquivCurrencies(updated);
-        try { localStorage.setItem(STORAGE_KEY_EQUIV, JSON.stringify(updated)); } catch (err) {}
-
         setDraggedCurIndex(null);
         setDragOverCurIndex(null);
     };
@@ -422,14 +444,18 @@ export default function CurrencyConverter() {
                                     paddingTop: '8px',
                                     borderTop: '1px solid #1c1c21'
                                 }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        gap: '6px',
-                                        overflowX: 'auto',
-                                        width: '100%',
-                                        scrollbarWidth: 'none',
-                                        alignItems: 'center'
-                                    }}>
+                                    <div
+                                        ref={equivScrollRef}
+                                        onDragOver={handleContainerDragOver}
+                                        style={{
+                                            display: 'flex',
+                                            gap: '6px',
+                                            overflowX: 'auto',
+                                            width: '100%',
+                                            scrollbarWidth: 'none',
+                                            alignItems: 'center'
+                                        }}
+                                    >
                                         <span style={{ fontSize: '0.6rem', color: '#71717a', fontWeight: '800', alignSelf: 'center', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                                             Equivalents:
                                         </span>
@@ -438,15 +464,14 @@ export default function CurrencyConverter() {
                                             const realIdx = equivCurrencies.indexOf(cur);
                                             const eqVal = getCalcResultEquivalent(cur);
                                             const isBeingDragged = draggedCurIndex === realIdx;
-                                            const isDragTarget = dragOverCurIndex === realIdx;
 
                                             return (
                                                 <div
                                                     key={cur}
                                                     draggable={true}
                                                     onDragStart={(e) => handleDragStart(e, realIdx)}
-                                                    onDragOver={(e) => handleDragOver(e, realIdx)}
-                                                    onDrop={(e) => handleDrop(e, realIdx)}
+                                                    onDragOver={(e) => handleDragOverItem(e, realIdx)}
+                                                    onDrop={handleDrop}
                                                     onDragEnd={handleDragEnd}
                                                     onTouchStart={() => handleTouchStart(realIdx)}
                                                     onTouchEnd={handleTouchEnd}
